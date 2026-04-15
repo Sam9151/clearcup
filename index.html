@@ -198,7 +198,77 @@
 </section>
 
   <!-- CONTACT -->
-  <section id="contact"></section>
+  <section id="contact" class="py-24 bg-gray-950 text-white">
+  <div class="max-w-2xl mx-auto px-6 text-center">
+    <p class="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-4">Contact</p>
+    <h2 class="text-3xl md:text-4xl font-bold mb-4">Devenir partenaire</h2>
+    <p class="text-gray-400 mb-12">Remplissez le formulaire, on vous répond sous 48h.</p>
+
+    <form id="contact-form"
+          action="https://formspree.io/f/XXXXXXXX"
+          method="POST"
+          class="text-left space-y-4">
+
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label for="prenom" class="block text-sm text-gray-400 mb-1">Prénom</label>
+          <input id="prenom" type="text" name="prenom" required
+                 class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
+                 placeholder="Sam" />
+        </div>
+        <div>
+          <label for="nom" class="block text-sm text-gray-400 mb-1">Nom</label>
+          <input id="nom" type="text" name="nom" required
+                 class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
+                 placeholder="Fabrizzi" />
+        </div>
+      </div>
+
+      <div>
+        <label for="etablissement" class="block text-sm text-gray-400 mb-1">Établissement</label>
+        <input id="etablissement" type="text" name="etablissement" required
+               class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
+               placeholder="Bar Le Central, Festival XYZ..." />
+      </div>
+
+      <div>
+        <label for="email" class="block text-sm text-gray-400 mb-1">Email professionnel</label>
+        <input id="email" type="email" name="email" required
+               class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
+               placeholder="contact@votreétablissement.ch" />
+      </div>
+
+      <div>
+        <label for="message" class="block text-sm text-gray-400 mb-1">Message <span class="text-gray-500">(optionnel)</span></label>
+        <textarea id="message" name="message" rows="4"
+                  class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors resize-none"
+                  placeholder="Volume estimé, date d'événement, questions..."></textarea>
+      </div>
+
+      <button type="submit"
+              class="w-full bg-white text-black py-4 rounded-xl font-semibold text-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+        Envoyer ma demande
+      </button>
+
+      <!-- Message de succès (caché par défaut) -->
+      <div id="form-success" class="hidden text-center py-4 text-green-400 font-medium">
+        ✓ Message envoyé ! On revient vers vous sous 48h.
+      </div>
+      <!-- Message d'erreur (caché par défaut) -->
+      <div id="form-error" class="hidden text-center py-4 text-red-400 font-medium">
+        Une erreur s'est produite. Réessayez ou écrivez-nous directement.
+      </div>
+
+    </form>
+
+    <!-- Footer minimal -->
+    <div class="mt-16 pt-8 border-t border-white/10 text-gray-500 text-sm flex flex-col md:flex-row items-center justify-between gap-4">
+      <p>© 2026 ClearCup — Fribourg, Suisse</p>
+      <a href="https://instagram.com/clearcup" target="_blank" rel="noopener"
+         class="hover:text-white transition-colors">Instagram @clearcup</a>
+    </div>
+  </div>
+</section>
 
   <script src="js/main.js"></script>
 </body>
