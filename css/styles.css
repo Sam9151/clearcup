@@ -1,1 +1,19 @@
 /* ClearCup — styles custom */
+
+/* Offset scroll pour compenser la navbar fixe (64px) */
+html {
+  scroll-padding-top: 4rem;
+}
+
+/* Transition douce sur les inputs au focus */
+input:focus,
+textarea:focus {
+  outline: none;
+}
+
+/* Empêcher le zoom iOS sur les inputs */
+@media screen and (max-width: 768px) {
+  input, textarea {
+    font-size: 16px;
+  }
+}
