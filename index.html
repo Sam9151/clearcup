@@ -11,7 +11,23 @@
 <body class="bg-white text-gray-900 font-sans">
 
   <!-- NAVBAR -->
-  <nav id="navbar"></nav>
+  <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
+    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+      <!-- Logo -->
+      <a href="#hero" class="flex items-center gap-2">
+        <img src="ASSET_CC/logo.svg" alt="ClearCup" class="h-8 w-auto"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
+        <span class="hidden font-bold text-xl tracking-tight">ClearCup</span>
+      </a>
+      <!-- CTA -->
+      <a href="#contact"
+         class="bg-black text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors">
+        Demander un devis
+      </a>
+    </div>
+  </nav>
+  <!-- Spacer pour compenser la navbar fixe -->
+  <div class="h-16"></div>
 
   <!-- HERO -->
   <section id="hero"></section>
