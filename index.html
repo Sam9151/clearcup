@@ -30,7 +30,30 @@
   <div class="h-16"></div>
 
   <!-- HERO -->
-  <section id="hero"></section>
+  <section id="hero" class="min-h-screen flex items-center bg-gray-950 text-white">
+  <div class="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
+    <!-- Texte -->
+    <div>
+      <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-6">
+        Protégez vos clients.<br />Renforcez votre image.
+      </h1>
+      <p class="text-lg text-gray-300 mb-8">
+        ClearCup est un sticker vinyle qui couvre les verres dans vos établissements
+        — une solution simple contre la soumission chimique en soirée.
+      </p>
+      <a href="#contact"
+         class="inline-block bg-white text-black px-8 py-3 rounded-full font-semibold text-lg hover:bg-gray-100 transition-colors">
+        Demander un devis
+      </a>
+    </div>
+    <!-- Visuel -->
+    <div class="flex justify-center">
+      <img src="ASSET_CC/hero.jpg" alt="Sticker ClearCup sur un verre"
+           class="rounded-2xl shadow-2xl max-h-96 object-cover w-full"
+           onerror="this.outerHTML='<div class=\'rounded-2xl bg-gray-800 h-80 w-full flex items-center justify-center text-gray-500\'>[Photo produit]</div>'" />
+    </div>
+  </div>
+</section>
 
   <!-- PROBLÈME -->
   <section id="probleme"></section>
