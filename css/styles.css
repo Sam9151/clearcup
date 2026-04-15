@@ -1,19 +1,265 @@
-/* ClearCup — styles custom */
+/* ClearCup — Design System Neo-Brutaliste */
 
-/* Offset scroll pour compenser la navbar fixe (64px) */
+/* ── Variables ── */
+:root {
+  --white: #FFFFFF;
+  --blue: #64A4F6;
+  --black: #000000;
+  --shadow-dark: 4px 4px 0 #000000;
+  --shadow-blue: 4px 4px 0 #64A4F6;
+  --shadow-dark-sm: 2px 2px 0 #000000;
+  --shadow-blue-sm: 2px 4px 0 #64A4F6;
+  --radius-card: 1.5rem;
+  --radius-btn: 9999px;
+  --border: 2px solid #000000;
+}
+
+/* ── Scroll offset ── */
 html {
   scroll-padding-top: 4rem;
 }
 
-/* Transition douce sur les inputs au focus */
-input:focus,
-textarea:focus {
-  outline: none;
+/* ── Base ── */
+body {
+  font-family: 'Arimo', sans-serif;
+  background-color: var(--white);
+  color: var(--black);
 }
 
-/* Empêcher le zoom iOS sur les inputs */
+/* ── Typography ── */
+h1 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(2.5rem, 5vw, 5rem);
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+h2 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(1.8rem, 3.5vw, 3rem);
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+
+h3 {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(1rem, 2vw, 1.4rem);
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  font-family: 'Arimo', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+}
+
+/* ── Navbar ── */
+#navbar {
+  background: var(--white);
+  border-bottom: var(--border);
+}
+
+.nav-logo {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 1.4rem;
+  text-transform: uppercase;
+  color: var(--black);
+  text-decoration: none;
+}
+
+/* ── Bouton principal (fond noir) ── */
+.btn-primary {
+  display: inline-block;
+  background: var(--black);
+  color: var(--white);
+  border: var(--border);
+  border-radius: var(--radius-btn);
+  padding: 0.75rem 2rem;
+  font-family: 'Arimo', sans-serif;
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  box-shadow: var(--shadow-dark);
+  transition: transform 100ms ease, box-shadow 100ms ease;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-dark-sm);
+}
+
+/* ── Bouton submit pleine largeur ── */
+.btn-submit {
+  width: 100%;
+  background: var(--black);
+  color: var(--white);
+  border: var(--border);
+  border-radius: 0.75rem;
+  padding: 1rem;
+  font-family: 'Arimo', sans-serif;
+  font-weight: 700;
+  font-size: 1.125rem;
+  box-shadow: var(--shadow-dark);
+  transition: transform 100ms ease, box-shadow 100ms ease;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-submit:hover:not(:disabled) {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-dark-sm);
+}
+
+.btn-submit:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ── Ripple ── */
+.ripple {
+  position: absolute;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(0);
+  animation: ripple-anim 500ms linear;
+  pointer-events: none;
+}
+
+@keyframes ripple-anim {
+  to {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+/* ── Cards (sur fond bleu) ── */
+.card {
+  border: var(--border);
+  border-radius: var(--radius-card);
+  padding: 2rem;
+  background: var(--white);
+  box-shadow: var(--shadow-dark);
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.card:hover {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-dark-sm);
+}
+
+/* ── Cards step (sur fond blanc) ── */
+.step-card {
+  border: var(--border);
+  border-radius: var(--radius-card);
+  padding: 2rem 1.5rem;
+  background: var(--white);
+  box-shadow: var(--shadow-dark);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  text-align: center;
+  transition: transform 100ms ease, box-shadow 100ms ease;
+}
+
+.step-card:hover {
+  transform: translate(2px, 2px);
+  box-shadow: var(--shadow-dark-sm);
+}
+
+.step-img {
+  width: 100%;
+  max-height: 160px;
+  object-fit: contain;
+}
+
+.step-number {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: 3rem;
+  color: var(--blue);
+  line-height: 1;
+}
+
+/* ── Stat number ── */
+.stat-number {
+  font-family: 'Bagel Fat One', cursive;
+  font-size: clamp(2.5rem, 5vw, 4rem);
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--black);
+}
+
+/* ── Inputs ── */
+.input-field {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.6);
+  border: var(--border);
+  border-radius: 0.75rem;
+  padding: 0.875rem 1rem;
+  font-family: 'Arimo', sans-serif;
+  font-size: 1rem;
+  color: var(--black);
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.input-field::placeholder {
+  color: rgba(0, 0, 0, 0.4);
+}
+
+.input-field:focus {
+  outline: none;
+  background: rgba(255, 255, 255, 0.85);
+  border-color: var(--black);
+}
+
+/* ── Mascotte ── */
+.mascotte {
+  position: absolute;
+  bottom: 2rem;
+  right: -1rem;
+  width: 110px;
+  z-index: 10;
+  animation: float 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-12px); }
+}
+
+.section-relative {
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Reveal animations ── */
+[data-reveal] {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 600ms ease-out, transform 600ms ease-out;
+}
+
+[data-reveal].revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+[data-reveal-delay="1"] { transition-delay: 100ms; }
+[data-reveal-delay="2"] { transition-delay: 200ms; }
+[data-reveal-delay="3"] { transition-delay: 300ms; }
+[data-reveal-delay="4"] { transition-delay: 400ms; }
+
+/* ── Prevent iOS zoom ── */
 @media screen and (max-width: 768px) {
   input, textarea {
     font-size: 16px;
+  }
+  .mascotte {
+    width: 75px;
   }
 }
