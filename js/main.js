@@ -11,6 +11,33 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   });
 });
 
+// Reveal scroll (IntersectionObserver)
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('revealed');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.15 });
+
+document.querySelectorAll('[data-reveal]').forEach(el => revealObserver.observe(el));
+
+// Ripple effect sur .btn-submit
+document.querySelectorAll('.btn-submit').forEach(btn => {
+  btn.addEventListener('click', function (e) {
+    const ripple = document.createElement('span');
+    ripple.classList.add('ripple');
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = (e.clientX - rect.left - size / 2) + 'px';
+    ripple.style.top = (e.clientY - rect.top - size / 2) + 'px';
+    btn.appendChild(ripple);
+    ripple.addEventListener('animationend', () => ripple.remove());
+  });
+});
+
 // Gestion du formulaire Formspree (AJAX)
 const form = document.getElementById('contact-form');
 const successMsg = document.getElementById('form-success');
