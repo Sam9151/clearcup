@@ -11,6 +11,32 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
   });
 });
 
+// Burger menu mobile
+const burgerBtn = document.getElementById('burger-btn');
+const mobileMenu = document.getElementById('mobile-menu');
+const burgerIcon = document.getElementById('burger-icon');
+const closeIcon = document.getElementById('close-icon');
+
+if (burgerBtn && mobileMenu) {
+  burgerBtn.addEventListener('click', () => {
+    const isOpen = !mobileMenu.classList.contains('hidden');
+    mobileMenu.classList.toggle('hidden');
+    burgerIcon.classList.toggle('hidden', !isOpen);
+    closeIcon.classList.toggle('hidden', isOpen);
+    burgerBtn.setAttribute('aria-expanded', String(!isOpen));
+  });
+
+  // Fermer le menu au clic sur un lien
+  mobileMenu.querySelectorAll('a').forEach(link => {
+    link.addEventListener('click', () => {
+      mobileMenu.classList.add('hidden');
+      burgerIcon.classList.remove('hidden');
+      closeIcon.classList.add('hidden');
+      burgerBtn.setAttribute('aria-expanded', 'false');
+    });
+  });
+}
+
 // Reveal scroll (IntersectionObserver)
 const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {

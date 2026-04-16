@@ -5,270 +5,245 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ClearCup — Protégez vos clients</title>
   <meta name="description" content="ClearCup est un sticker vinyle anti-soumission chimique pour bars, clubs et festivals. Simple, efficace, accessible." />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <!-- Tailwind CDN (layout utilities) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/styles.css" />
 </head>
-<body class="bg-white text-gray-900 font-sans">
+<body>
 
   <!-- NAVBAR -->
-  <nav id="navbar" class="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
-    <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-      <!-- Logo -->
-      <a href="#hero" class="flex items-center gap-2">
+  <nav id="navbar" class="fixed top-0 left-0 right-0 z-50">
+    <div class="nav-inner max-w-6xl mx-auto px-6 py-4">
+      <a href="#hero" class="nav-logo flex items-center gap-2">
         <img src="ASSET_CC/logo.svg" alt="ClearCup" class="h-8 w-auto"
              onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
-        <span class="hidden font-bold text-xl tracking-tight">ClearCup</span>
+        <span class="hidden">ClearCup</span>
       </a>
-      <!-- CTA -->
-      <a href="#contact"
-         class="bg-black text-white px-5 py-2 rounded-full text-sm font-semibold hover:bg-gray-800 transition-colors">
-        Demander un devis
-      </a>
+      <ul class="hidden md:flex items-center gap-6 nav-links">
+        <li><a href="#probleme">Le problème</a></li>
+        <li><a href="#comment">Comment ça marche</a></li>
+        <li><a href="#pour-qui">Pour qui</a></li>
+        <li><a href="#pourquoi">Pourquoi ClearCup</a></li>
+      </ul>
+      <button id="burger-btn" class="md:hidden burger-btn" aria-label="Menu" aria-expanded="false">
+        <svg id="burger-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line x1="3" y1="6" x2="21" y2="6" />
+          <line x1="3" y1="12" x2="21" y2="12" />
+          <line x1="3" y1="18" x2="21" y2="18" />
+        </svg>
+        <svg id="close-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="hidden">
+          <line x1="4" y1="4" x2="20" y2="20" />
+          <line x1="20" y1="4" x2="4" y2="20" />
+        </svg>
+      </button>
+      <a href="#contact" class="btn-primary nav-cta">Demander un devis</a>
+    </div>
+    <!-- Mobile menu -->
+    <div id="mobile-menu" class="mobile-menu md:hidden hidden">
+      <ul class="nav-links-mobile">
+        <li><a href="#probleme">Le problème</a></li>
+        <li><a href="#comment">Comment ça marche</a></li>
+        <li><a href="#pour-qui">Pour qui</a></li>
+        <li><a href="#pourquoi">Pourquoi ClearCup</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
     </div>
   </nav>
-  <!-- Spacer pour compenser la navbar fixe -->
-  <div class="h-16"></div>
+  <div class="navbar-spacer"></div>
 
-  <!-- HERO -->
-  <section id="hero" class="min-h-screen flex items-center bg-gray-950 text-white">
-  <div class="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-12 items-center">
-    <!-- Texte -->
-    <div>
-      <h1 class="text-4xl md:text-5xl font-bold leading-tight mb-6">
-        Protégez vos clients.<br />Renforcez votre image.
-      </h1>
-      <p class="text-lg text-gray-300 mb-8">
-        ClearCup est un sticker vinyle qui couvre les verres dans vos établissements
-        — une solution simple contre la soumission chimique en soirée.
+  <!-- HERO — pleine largeur -->
+  <section id="hero" class="hero-section">
+    <img src="ASSET_CC/hero-product.png" alt="Sticker ClearCup sur un verre" class="hero-img" />
+    <div class="hero-overlay">
+      <div class="hero-left" data-reveal>
+        <h1>Protégez<br />vos clients.</h1>
+      </div>
+      <div class="hero-center"></div>
+      <div class="hero-right" data-reveal data-reveal-delay="1">
+        <p>ClearCup est un sticker vinyle qui couvre les verres dans vos établissements — une solution simple contre la soumission chimique en soirée.</p>
+        <a href="#contact" class="btn-primary">Demander un devis</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROBLÈME — fond bleu -->
+  <section id="probleme" class="py-24 section-relative" style="background: var(--blue);">
+    <div class="max-w-6xl mx-auto px-6 text-center">
+      <h2 class="mb-8 section-title" data-reveal>La soumission chimique,<br />un risque réel</h2>
+      <div class="grid md:grid-cols-2 gap-8 text-left mt-12">
+        <div class="card text-center" data-reveal data-reveal-delay="1">
+          <p class="stat-number mb-2">1 sur 8</p>
+          <p style="font-family: 'Arimo', sans-serif;">jeunes adultes déclare avoir été victime ou avoir craint une soumission chimique lors d'une soirée (source : études européennes de prévention).</p>
+        </div>
+        <div class="card text-center" data-reveal data-reveal-delay="2">
+          <p class="stat-number mb-2">82%</p>
+          <p style="font-family: 'Arimo', sans-serif;">des cas se produisent dans des bars, clubs ou festivals — des lieux où les verres sont posés, partagés, perdus de vue.</p>
+        </div>
+      </div>
+      <p class="mt-10" style="font-family: 'Arimo', sans-serif; opacity: 0.85;" data-reveal>
+        En tant qu'établissement, proposer une solution concrète, c'est protéger vos clients
+        et affirmer votre engagement pour une soirée sûre.
       </p>
-      <a href="#contact"
-         class="inline-block bg-white text-black px-8 py-3 rounded-full font-semibold text-lg hover:bg-gray-100 transition-colors">
-        Demander un devis
-      </a>
     </div>
-    <!-- Visuel -->
-    <div class="flex justify-center">
-      <img src="ASSET_CC/hero.jpg" alt="Sticker ClearCup sur un verre"
-           class="rounded-2xl shadow-2xl max-h-96 object-cover w-full"
-           onerror="this.outerHTML='<div class=\'rounded-2xl bg-gray-800 h-80 w-full flex items-center justify-center text-gray-500\'>[Photo produit]</div>'" />
-    </div>
-  </div>
-</section>
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+         onerror="this.style.display='none'" />
+  </section>
 
-  <!-- PROBLÈME -->
-  <section id="probleme" class="py-24 bg-white">
-  <div class="max-w-3xl mx-auto px-6 text-center">
-    <p class="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-4">Le contexte</p>
-    <h2 class="text-3xl md:text-4xl font-bold mb-8">
-      La soumission chimique, un risque réel dans les établissements nocturnes
-    </h2>
-    <div class="grid md:grid-cols-2 gap-8 text-left mt-12">
-      <div class="bg-gray-50 rounded-2xl p-8">
-        <p class="text-5xl font-bold text-black mb-2">1 sur 8</p>
-        <p class="text-gray-600">jeunes adultes déclare avoir été victime ou avoir craint une soumission chimique lors d'une soirée (source : études européennes de prévention).</p>
-      </div>
-      <div class="bg-gray-50 rounded-2xl p-8">
-        <p class="text-5xl font-bold text-black mb-2">82%</p>
-        <p class="text-gray-600">des cas se produisent dans des bars, clubs ou festivals — des lieux où les verres sont posés, partagés, perdus de vue.</p>
-      </div>
-    </div>
-    <p class="mt-10 text-gray-500 text-base">
-      En tant qu'établissement, proposer une solution concrète, c'est protéger vos clients
-      et affirmer votre engagement pour une soirée sûre.
-    </p>
-  </div>
-</section>
-
-  <!-- COMMENT ÇA MARCHE -->
-  <section id="comment" class="py-24 bg-gray-950 text-white">
-  <div class="max-w-5xl mx-auto px-6 text-center">
-    <p class="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-4">Simple à utiliser</p>
-    <h2 class="text-3xl md:text-4xl font-bold mb-16">Comment ça marche</h2>
-    <div class="grid md:grid-cols-3 gap-10">
-
-      <!-- Étape 1 -->
-      <div class="flex flex-col items-center gap-4">
-        <div class="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
-          <img src="ASSET_CC/step-1.png" alt="Coller le sticker" class="w-10 h-10 object-contain"
-               onerror="this.outerHTML='<span class=\'text-3xl\'>📌</span>'" />
+  <!-- COMMENT ÇA MARCHE — fond blanc -->
+  <section id="comment" class="py-24 section-relative" style="background: var(--white);">
+    <div class="max-w-5xl mx-auto px-6 text-center">
+      <h2 class="mb-16" data-reveal>Comment ça marche</h2>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="step-card" data-reveal data-reveal-delay="1">
+          <img src="ASSET_CC/step-coller.png" alt="Prendre le sticker" class="step-img"
+               onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>📌</div>'" />
+          <p class="step-number">01</p>
+          <h3>Prendre</h3>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Sortez le sticker ClearCup de son emballage.</p>
         </div>
-        <p class="text-4xl font-bold text-white/20">01</p>
-        <h3 class="text-xl font-semibold">Coller</h3>
-        <p class="text-gray-400 text-sm">Le sticker adhère sur n'importe quel verre en quelques secondes.</p>
-      </div>
-
-      <!-- Étape 2 -->
-      <div class="flex flex-col items-center gap-4">
-        <div class="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
-          <img src="ASSET_CC/step-2.png" alt="Passer la paille" class="w-10 h-10 object-contain"
-               onerror="this.outerHTML='<span class=\'text-3xl\'>🥤</span>'" />
+        <div class="step-card" data-reveal data-reveal-delay="2">
+          <img src="ASSET_CC/step-proteger.png" alt="Coller le sticker sur le verre" class="step-img"
+               onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>🥤</div>'" />
+          <p class="step-number">02</p>
+          <h3>Coller</h3>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Le sticker adhère sur n'importe quel verre en quelques secondes.</p>
         </div>
-        <p class="text-4xl font-bold text-white/20">02</p>
-        <h3 class="text-xl font-semibold">Passer la paille</h3>
-        <p class="text-gray-400 text-sm">Le petit trou central permet d'utiliser le verre normalement.</p>
-      </div>
-
-      <!-- Étape 3 -->
-      <div class="flex flex-col items-center gap-4">
-        <div class="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center">
-          <img src="ASSET_CC/step-3.png" alt="Verre protégé" class="w-10 h-10 object-contain"
-               onerror="this.outerHTML='<span class=\'text-3xl\'>🛡️</span>'" />
+        <div class="step-card" data-reveal data-reveal-delay="3">
+          <img src="ASSET_CC/step-paille.png" alt="Transpercer avec une paille et profiter" class="step-img"
+               onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>🛡️</div>'" />
+          <p class="step-number">03</p>
+          <h3>Profiter</h3>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Transpercer avec une paille et profitez — verre couvert, soirée sécurisée.</p>
         </div>
-        <p class="text-4xl font-bold text-white/20">03</p>
-        <h3 class="text-xl font-semibold">Protéger</h3>
-        <p class="text-gray-400 text-sm">Le verre est couvert — toute tentative d'introduction est visible.</p>
       </div>
-
     </div>
-  </div>
-</section>
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+         style="left: -1rem; right: auto;"
+         onerror="this.style.display='none'" />
+  </section>
 
-  <!-- POUR QUI -->
-  <section id="pour-qui" class="py-24 bg-white">
-  <div class="max-w-5xl mx-auto px-6">
-    <div class="text-center mb-16">
-      <p class="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-4">Nos partenaires</p>
-      <h2 class="text-3xl md:text-4xl font-bold">Fait pour votre établissement</h2>
-    </div>
-    <div class="grid md:grid-cols-2 gap-6">
-
-      <div class="border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-shadow">
-        <p class="text-2xl mb-3">🍸</p>
-        <h3 class="text-xl font-semibold mb-2">Bars & clubs</h3>
-        <p class="text-gray-500 text-sm">Offrez à vos clients une soirée en confiance. Différenciez-vous par votre engagement sécurité.</p>
+  <!-- POUR QUI — fond bleu -->
+  <section id="pour-qui" class="py-24 section-relative" style="background: var(--blue);">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 data-reveal>Fait pour votre<br />établissement</h2>
       </div>
-
-      <div class="border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-shadow">
-        <p class="text-2xl mb-3">🎪</p>
-        <h3 class="text-xl font-semibold mb-2">Festivals & événements</h3>
-        <p class="text-gray-500 text-sm">Distribuez ClearCup à l'entrée ou aux bars. Simple à déployer à grande échelle, sans logistique lourde.</p>
-      </div>
-
-      <div class="border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-shadow">
-        <p class="text-2xl mb-3">🤝</p>
-        <h3 class="text-xl font-semibold mb-2">Associations de prévention</h3>
-        <p class="text-gray-500 text-sm">Un outil concret à distribuer lors de vos actions de sensibilisation auprès des jeunes.</p>
-      </div>
-
-      <div class="border border-gray-100 rounded-2xl p-8 hover:shadow-md transition-shadow">
-        <p class="text-2xl mb-3">🎓</p>
-        <h3 class="text-xl font-semibold mb-2">Établissements universitaires</h3>
-        <p class="text-gray-500 text-sm">Intégrez ClearCup dans votre politique de bien-être étudiant lors des soirées et événements campus.</p>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-  <!-- POURQUOI INVESTIR -->
-  <section id="pourquoi" class="py-24 bg-gray-50">
-  <div class="max-w-5xl mx-auto px-6">
-    <div class="text-center mb-16">
-      <p class="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-4">Pourquoi ClearCup</p>
-      <h2 class="text-3xl md:text-4xl font-bold">Un investissement qui fait sens</h2>
-    </div>
-    <div class="grid md:grid-cols-3 gap-8">
-
-      <div class="text-center">
-        <div class="w-14 h-14 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
-          <span class="text-white text-xl">✓</span>
+      <div class="max-w-3xl mx-auto grid md:grid-cols-2 gap-6">
+        <div class="card text-center" data-reveal data-reveal-delay="1">
+          <h3 class="mb-2 card-title">Bars & clubs</h3>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Offrez à vos clients une soirée en confiance. Différenciez-vous par votre engagement sécurité.</p>
         </div>
-        <h3 class="text-lg font-semibold mb-2">Responsabilité</h3>
-        <p class="text-gray-500 text-sm">Montrez à vos clients que leur sécurité est une priorité. Un geste fort, visible, apprécié.</p>
-      </div>
-
-      <div class="text-center">
-        <div class="w-14 h-14 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
-          <span class="text-white text-xl">⚡</span>
+        <div class="card text-center" data-reveal data-reveal-delay="2">
+          <h3 class="mb-2 card-title">Festivals & événements</h3>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Distribuez ClearCup à l'entrée ou aux bars. Simple à déployer à grande échelle, sans logistique lourde.</p>
         </div>
-        <h3 class="text-lg font-semibold mb-2">Simplicité</h3>
-        <p class="text-gray-500 text-sm">Aucune formation, aucune installation. On colle, c'est fait. Ça s'intègre à n'importe quel service.</p>
       </div>
-
-      <div class="text-center">
-        <div class="w-14 h-14 bg-black rounded-full flex items-center justify-center mx-auto mb-4">
-          <span class="text-white text-xl">💶</span>
-        </div>
-        <h3 class="text-lg font-semibold mb-2">Accessibilité</h3>
-        <p class="text-gray-500 text-sm">Tarifs modulables selon les volumes. Adaptés aux petits bars comme aux grands festivals.</p>
-      </div>
-
     </div>
-  </div>
-</section>
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+         onerror="this.style.display='none'" />
+  </section>
 
-  <!-- CONTACT -->
-  <section id="contact" class="py-24 bg-gray-950 text-white">
-  <div class="max-w-2xl mx-auto px-6 text-center">
-    <p class="text-sm font-semibold uppercase tracking-widest text-gray-400 mb-4">Contact</p>
-    <h2 class="text-3xl md:text-4xl font-bold mb-4">Devenir partenaire</h2>
-    <p class="text-gray-400 mb-12">Remplissez le formulaire, on vous répond sous 48h.</p>
+  <!-- POURQUOI INVESTIR — fond blanc -->
+  <section id="pourquoi" class="py-24 section-relative" style="background: var(--white);">
+    <div class="max-w-5xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 data-reveal>Un investissement<br />qui fait sens</h2>
+      </div>
+      <div class="grid md:grid-cols-3 gap-8">
+        <div class="card text-center" data-reveal data-reveal-delay="1">
+          <img src="ASSET_CC/responsabilite.svg" alt="" class="card-icon" aria-hidden="true" />
+          <h3 class="mb-2">Responsabilité</h3>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Montrez à vos clients que leur sécurité est une priorité. Un geste fort, visible, apprécié.</p>
+        </div>
+        <div class="card text-center" data-reveal data-reveal-delay="2">
+          <img src="ASSET_CC/simplicity.svg" alt="" class="card-icon" aria-hidden="true" />
+          <h3 class="mb-2">Simplicité</h3>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Aucune formation, aucune installation. On colle, c'est fait. Ça s'intègre à n'importe quel service.</p>
+        </div>
+        <div class="card text-center" data-reveal data-reveal-delay="3">
+          <img src="ASSET_CC/accesible.svg" alt="" class="card-icon" aria-hidden="true" />
+          <h3 class="mb-2">Accessibilité</h3>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Tarifs modulables selon les volumes. Adaptés aux petits bars comme aux grands festivals.</p>
+        </div>
+      </div>
+    </div>
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+         style="left: -1rem; right: auto;"
+         onerror="this.style.display='none'" />
+  </section>
 
-    <form id="contact-form"
-          action="https://formspree.io/f/XXXXXXXX"
-          method="POST"
-          class="text-left space-y-4">
+  <!-- CONTACT — fond bleu -->
+  <section id="contact" class="py-24 section-relative" style="background: var(--blue);">
+    <div class="max-w-2xl mx-auto px-6 text-center">
+      <h2 class="mb-4" data-reveal>Devenir partenaire</h2>
+      <p class="mb-12" style="font-family: 'Arimo', sans-serif;" data-reveal>Remplissez le formulaire, on vous répond sous 48h.</p>
 
-      <div class="grid md:grid-cols-2 gap-4">
+      <form id="contact-form"
+            action="https://formspree.io/f/mwvalepz"
+            method="POST"
+            class="text-left space-y-4"
+            data-reveal>
+
+        <div class="grid md:grid-cols-2 gap-4">
+          <div>
+            <label for="prenom" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">Prénom</label>
+            <input id="prenom" type="text" name="prenom" required class="input-field" placeholder="Sam" />
+          </div>
+          <div>
+            <label for="nom" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">Nom</label>
+            <input id="nom" type="text" name="nom" required class="input-field" placeholder="Fabrizzi" />
+          </div>
+        </div>
+
         <div>
-          <label for="prenom" class="block text-sm text-gray-400 mb-1">Prénom</label>
-          <input id="prenom" type="text" name="prenom" required
-                 class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
-                 placeholder="Sam" />
+          <label for="etablissement" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">Établissement</label>
+          <input id="etablissement" type="text" name="etablissement" required class="input-field"
+                 placeholder="Bar Le Central, Festival XYZ..." />
         </div>
+
         <div>
-          <label for="nom" class="block text-sm text-gray-400 mb-1">Nom</label>
-          <input id="nom" type="text" name="nom" required
-                 class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
-                 placeholder="Fabrizzi" />
+          <label for="email" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">Email professionnel</label>
+          <input id="email" type="email" name="email" required class="input-field"
+                 placeholder="contact@votreétablissement.ch" />
         </div>
+
+        <div>
+          <label for="message" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">
+            Message <span style="opacity:0.6;">(optionnel)</span>
+          </label>
+          <textarea id="message" name="message" rows="4" class="input-field" style="resize:none;"
+                    placeholder="Volume estimé, date d'événement, questions..."></textarea>
+        </div>
+
+        <button type="submit" class="btn-submit">Envoyer ma demande</button>
+
+        <div id="form-success" class="hidden text-center py-4 font-bold" style="font-family:'Arimo',sans-serif;">
+          ✓ Message envoyé ! On revient vers vous sous 48h.
+        </div>
+        <div id="form-error" class="hidden text-center py-4 font-bold" style="font-family:'Arimo',sans-serif;">
+          Une erreur s'est produite. Réessayez ou écrivez-nous directement.
+        </div>
+      </form>
+
+      <div class="mt-16 pt-8 flex flex-col md:flex-row items-center justify-between gap-4"
+           style="border-top: 2px solid rgba(0,0,0,0.2); font-family:'Arimo',sans-serif; font-size:0.875rem;">
+        <p>© 2026 ClearCup — Fribourg, Suisse</p>
+        <a href="https://instagram.com/clearcup.ch" target="_blank" rel="noopener" class="insta-link" aria-label="Instagram @clearcup.ch">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+            <circle cx="12" cy="12" r="4"/>
+            <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
+          </svg>
+        </a>
       </div>
-
-      <div>
-        <label for="etablissement" class="block text-sm text-gray-400 mb-1">Établissement</label>
-        <input id="etablissement" type="text" name="etablissement" required
-               class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
-               placeholder="Bar Le Central, Festival XYZ..." />
-      </div>
-
-      <div>
-        <label for="email" class="block text-sm text-gray-400 mb-1">Email professionnel</label>
-        <input id="email" type="email" name="email" required
-               class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors"
-               placeholder="contact@votreétablissement.ch" />
-      </div>
-
-      <div>
-        <label for="message" class="block text-sm text-gray-400 mb-1">Message <span class="text-gray-500">(optionnel)</span></label>
-        <textarea id="message" name="message" rows="4"
-                  class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-white transition-colors resize-none"
-                  placeholder="Volume estimé, date d'événement, questions..."></textarea>
-      </div>
-
-      <button type="submit"
-              class="w-full bg-white text-black py-4 rounded-xl font-semibold text-lg hover:bg-gray-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-        Envoyer ma demande
-      </button>
-
-      <!-- Message de succès (caché par défaut) -->
-      <div id="form-success" class="hidden text-center py-4 text-green-400 font-medium">
-        ✓ Message envoyé ! On revient vers vous sous 48h.
-      </div>
-      <!-- Message d'erreur (caché par défaut) -->
-      <div id="form-error" class="hidden text-center py-4 text-red-400 font-medium">
-        Une erreur s'est produite. Réessayez ou écrivez-nous directement.
-      </div>
-
-    </form>
-
-    <!-- Footer minimal -->
-    <div class="mt-16 pt-8 border-t border-white/10 text-gray-500 text-sm flex flex-col md:flex-row items-center justify-between gap-4">
-      <p>© 2026 ClearCup — Fribourg, Suisse</p>
-      <a href="https://instagram.com/clearcup" target="_blank" rel="noopener"
-         class="hover:text-white transition-colors">Instagram @clearcup</a>
     </div>
-  </div>
-</section>
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+         onerror="this.style.display='none'" />
+  </section>
 
   <script src="js/main.js"></script>
 </body>
