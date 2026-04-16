@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>404 — Page introuvable | ClearCup</title>
+  <link rel="icon" type="image/svg+xml" href="ASSET_CC/favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    .page-404 {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 2rem;
+      background: var(--white);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .error-code {
+      font-family: 'Bagel Fat One', cursive;
+      font-size: clamp(8rem, 25vw, 18rem);
+      line-height: 0.9;
+      color: var(--blue);
+      -webkit-text-stroke: 3px var(--black);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .error-title {
+      font-family: 'Bagel Fat One', cursive;
+      font-size: clamp(1.5rem, 4vw, 2.5rem);
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+    }
+
+    .error-sub {
+      font-family: 'Arimo', sans-serif;
+      font-size: 1rem;
+      max-width: 36ch;
+      margin: 0 auto 2.5rem;
+      opacity: 0.75;
+      line-height: 1.6;
+    }
+
+    .mascotte-404 {
+      position: absolute;
+      bottom: 2rem;
+      right: 2rem;
+      width: 100px;
+      animation: float 3s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    @media (max-width: 767px) {
+      .mascotte-404 { width: 70px; }
+    }
+
+    .fade-up {
+      opacity: 0;
+      transform: translateY(30px);
+      animation: fade-up-in 600ms ease-out forwards;
+    }
+
+    @keyframes fade-up-in {
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .delay-1 { animation-delay: 100ms; }
+    .delay-2 { animation-delay: 250ms; }
+    .delay-3 { animation-delay: 400ms; }
+    .delay-4 { animation-delay: 550ms; }
+  </style>
+</head>
+<body>
+
+  <!-- NAVBAR -->
+  <nav id="navbar" class="fixed top-0 left-0 right-0 z-50">
+    <div class="nav-inner max-w-6xl mx-auto px-6 py-4">
+      <a href="index.html" class="nav-logo flex items-center gap-2">
+        <img src="ASSET_CC/logo.svg" alt="ClearCup" class="h-8 w-auto"
+             onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
+        <span class="hidden">ClearCup</span>
+      </a>
+    </div>
+  </nav>
+
+  <div class="page-404">
+    <p class="error-code fade-up delay-1">404</p>
+    <h1 class="error-title fade-up delay-2">Page introuvable</h1>
+    <p class="error-sub fade-up delay-3">Ce verre a disparu — mais pas de panique, le reste du site est bien là.</p>
+    <a href="index.html" class="btn-primary fade-up delay-4">Retour à l'accueil</a>
+
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte-404" aria-hidden="true"
+         loading="lazy" onerror="this.style.display='none'" />
+  </div>
+
+</body>
+</html>

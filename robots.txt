@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://sam9151.github.io/clearcup/sitemap.xml
