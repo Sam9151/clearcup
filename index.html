@@ -3,14 +3,37 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClearCup — Protégez vos clients</title>
+  <title>ClearCup — Sticker anti-soumission chimique pour bars &amp; festivals</title>
   <meta name="description" content="ClearCup est un sticker vinyle anti-soumission chimique pour bars, clubs et festivals. Simple, efficace, accessible." />
+  <link rel="canonical" href="https://sam9151.github.io/clearcup/" />
+
+  <!-- Open Graph -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://sam9151.github.io/clearcup/" />
+  <meta property="og:title"       content="ClearCup — Protégez vos clients" />
+  <meta property="og:description" content="ClearCup est un sticker vinyle anti-soumission chimique pour bars, clubs et festivals. Simple, efficace, accessible." />
+  <meta property="og:image"       content="https://sam9151.github.io/clearcup/ASSET_CC/hero-product.png" />
+  <meta property="og:locale"      content="fr_CH" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card"        content="summary_large_image" />
+  <meta name="twitter:site"        content="@clearcup_ch" />
+  <meta name="twitter:title"       content="ClearCup — Sticker anti-soumission chimique pour bars &amp; festivals" />
+  <meta name="twitter:description" content="ClearCup est un sticker vinyle anti-soumission chimique pour bars, clubs et festivals. Simple, efficace, accessible." />
+  <meta name="twitter:image"       content="https://sam9151.github.io/clearcup/ASSET_CC/hero-product.png" />
+  <!-- Hreflang -->
+  <link rel="alternate" hreflang="fr-CH" href="https://sam9151.github.io/clearcup/" />
+  <link rel="alternate" hreflang="x-default" href="https://sam9151.github.io/clearcup/" />
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" />
   <link href="https://fonts.googleapis.com/css2?family=Bagel+Fat+One&family=Arimo:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
   <!-- Tailwind CDN (layout utilities) -->
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="icon" type="image/svg+xml" href="ASSET_CC/favicon.svg" />
+  <meta name="theme-color" content="#FFFFFF" />
+  <link rel="preload" as="image" href="ASSET_CC/hero-product.png" />
   <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body>
@@ -25,39 +48,37 @@
       </a>
       <ul class="hidden md:flex items-center gap-6 nav-links">
         <li><a href="#probleme">Le problème</a></li>
-        <li><a href="#comment">Comment ça marche</a></li>
-        <li><a href="#pour-qui">Pour qui</a></li>
-        <li><a href="#pourquoi">Pourquoi ClearCup</a></li>
+        <li><a href="#comment">Comment ça marche ?</a></li>
+        <li><a href="#pour-qui">Pour qui ?</a></li>
+        <li><a href="#pourquoi">Pourquoi ClearCup ?</a></li>
       </ul>
       <button id="burger-btn" class="md:hidden burger-btn" aria-label="Menu" aria-expanded="false">
-        <svg id="burger-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
-          <line x1="3" y1="6" x2="21" y2="6" />
-          <line x1="3" y1="12" x2="21" y2="12" />
-          <line x1="3" y1="18" x2="21" y2="18" />
-        </svg>
-        <svg id="close-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" class="hidden">
-          <line x1="4" y1="4" x2="20" y2="20" />
-          <line x1="20" y1="4" x2="4" y2="20" />
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <line class="burger-line burger-line-top" x1="3" y1="6" x2="21" y2="6" />
+          <line class="burger-line burger-line-mid" x1="3" y1="12" x2="21" y2="12" />
+          <line class="burger-line burger-line-bot" x1="3" y1="18" x2="21" y2="18" />
         </svg>
       </button>
       <a href="#contact" class="btn-primary nav-cta">Demander un devis</a>
     </div>
     <!-- Mobile menu -->
-    <div id="mobile-menu" class="mobile-menu md:hidden hidden">
-      <ul class="nav-links-mobile">
-        <li><a href="#probleme">Le problème</a></li>
-        <li><a href="#comment">Comment ça marche</a></li>
-        <li><a href="#pour-qui">Pour qui</a></li>
-        <li><a href="#pourquoi">Pourquoi ClearCup</a></li>
-        <li><a href="#contact">Contact</a></li>
-      </ul>
+    <div id="mobile-menu" class="mobile-menu hidden">
+      <div class="mobile-menu-inner">
+        <ul class="nav-links-mobile">
+          <li><a href="#probleme">Le problème</a></li>
+          <li><a href="#comment">Comment ça marche ?</a></li>
+          <li><a href="#pour-qui">Pour qui ?</a></li>
+          <li><a href="#pourquoi">Pourquoi ClearCup ?</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ul>
+      </div>
     </div>
   </nav>
   <div class="navbar-spacer"></div>
 
   <!-- HERO — pleine largeur -->
   <section id="hero" class="hero-section">
-    <img src="ASSET_CC/hero-product.png" alt="Sticker ClearCup sur un verre" class="hero-img" />
+    <img src="ASSET_CC/hero-product.png" alt="Sticker ClearCup sur un verre" class="hero-img" width="1200" height="715" fetchpriority="high" decoding="async" />
     <div class="hero-overlay">
       <div class="hero-left" data-reveal>
         <h1>Protégez<br />vos clients.</h1>
@@ -65,7 +86,7 @@
       <div class="hero-center"></div>
       <div class="hero-right" data-reveal data-reveal-delay="1">
         <p>ClearCup est un sticker vinyle qui couvre les verres dans vos établissements — une solution simple contre la soumission chimique en soirée.</p>
-        <a href="#contact" class="btn-primary">Demander un devis</a>
+        <a href="#contact" class="btn-primary jello-horizontal">Demander un devis</a>
       </div>
     </div>
   </section>
@@ -76,12 +97,12 @@
       <h2 class="mb-8 section-title" data-reveal>La soumission chimique,<br />un risque réel</h2>
       <div class="grid md:grid-cols-2 gap-8 text-left mt-12">
         <div class="card text-center" data-reveal data-reveal-delay="1">
-          <p class="stat-number mb-2">1 sur 8</p>
-          <p style="font-family: 'Arimo', sans-serif;">jeunes adultes déclare avoir été victime ou avoir craint une soumission chimique lors d'une soirée (source : études européennes de prévention).</p>
+          <p class="stat-number mb-2" data-counter data-to="80" data-prefix="+" data-suffix="%">+80%</p>
+          <p style="font-family: 'Arimo', sans-serif;">des victimes de soumission chimique vraisemblable sont des femmes ou des filles.</p>
         </div>
         <div class="card text-center" data-reveal data-reveal-delay="2">
-          <p class="stat-number mb-2">82%</p>
-          <p style="font-family: 'Arimo', sans-serif;">des cas se produisent dans des bars, clubs ou festivals — des lieux où les verres sont posés, partagés, perdus de vue.</p>
+          <p class="stat-number mb-2" data-counter-range data-to1="8" data-to2="9" data-suffix="%">8–9%</p>
+          <p style="font-family: 'Arimo', sans-serif;">seulement des victimes signalent les faits — respectivement à la police et à l'hôpital.</p>
         </div>
       </div>
       <p class="mt-10" style="font-family: 'Arimo', sans-serif; opacity: 0.85;" data-reveal>
@@ -89,31 +110,31 @@
         et affirmer votre engagement pour une soirée sûre.
       </p>
     </div>
-    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true" loading="lazy"
          onerror="this.style.display='none'" />
   </section>
 
   <!-- COMMENT ÇA MARCHE — fond blanc -->
   <section id="comment" class="py-24 section-relative" style="background: var(--white);">
     <div class="max-w-5xl mx-auto px-6 text-center">
-      <h2 class="mb-16" data-reveal>Comment ça marche</h2>
+      <h2 class="mb-16" data-reveal>Comment ça marche ?</h2>
       <div class="grid md:grid-cols-3 gap-8">
         <div class="step-card" data-reveal data-reveal-delay="1">
-          <img src="ASSET_CC/step-coller.png" alt="Prendre le sticker" class="step-img"
+          <img src="ASSET_CC/step-coller.png" alt="Prendre le sticker" class="step-img" width="432" height="592" loading="lazy"
                onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>📌</div>'" />
           <p class="step-number">01</p>
           <h3>Prendre</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Sortez le sticker ClearCup de son emballage.</p>
         </div>
         <div class="step-card" data-reveal data-reveal-delay="2">
-          <img src="ASSET_CC/step-proteger.png" alt="Coller le sticker sur le verre" class="step-img"
+          <img src="ASSET_CC/step-proteger.png" alt="Coller le sticker sur le verre" class="step-img" width="432" height="592" loading="lazy"
                onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>🥤</div>'" />
           <p class="step-number">02</p>
           <h3>Coller</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Le sticker adhère sur n'importe quel verre en quelques secondes.</p>
         </div>
         <div class="step-card" data-reveal data-reveal-delay="3">
-          <img src="ASSET_CC/step-paille.png" alt="Transpercer avec une paille et profiter" class="step-img"
+          <img src="ASSET_CC/step-paille.png" alt="Transpercer avec une paille et profiter" class="step-img" width="432" height="592" loading="lazy"
                onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>🛡️</div>'" />
           <p class="step-number">03</p>
           <h3>Profiter</h3>
@@ -121,7 +142,7 @@
         </div>
       </div>
     </div>
-    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true" loading="lazy"
          style="left: -1rem; right: auto;"
          onerror="this.style.display='none'" />
   </section>
@@ -143,9 +164,20 @@
         </div>
       </div>
     </div>
-    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true" loading="lazy"
          onerror="this.style.display='none'" />
   </section>
+
+  <!-- Modale légale -->
+  <div id="legal-modal" class="legal-modal hidden">
+    <button id="legal-close" class="legal-close" aria-label="Fermer">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+        <line x1="4" y1="4" x2="20" y2="20" />
+        <line x1="20" y1="4" x2="4" y2="20" />
+      </svg>
+    </button>
+    <div class="legal-content" id="legal-content"></div>
+  </div>
 
   <!-- POURQUOI INVESTIR — fond blanc -->
   <section id="pourquoi" class="py-24 section-relative" style="background: var(--white);">
@@ -155,23 +187,23 @@
       </div>
       <div class="grid md:grid-cols-3 gap-8">
         <div class="card text-center" data-reveal data-reveal-delay="1">
-          <img src="ASSET_CC/responsabilite.svg" alt="" class="card-icon" aria-hidden="true" />
+          <img src="ASSET_CC/responsabilite.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" />
           <h3 class="mb-2">Responsabilité</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Montrez à vos clients que leur sécurité est une priorité. Un geste fort, visible, apprécié.</p>
         </div>
         <div class="card text-center" data-reveal data-reveal-delay="2">
-          <img src="ASSET_CC/simplicity.svg" alt="" class="card-icon" aria-hidden="true" />
+          <img src="ASSET_CC/simplicity.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" />
           <h3 class="mb-2">Simplicité</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Aucune formation, aucune installation. On colle, c'est fait. Ça s'intègre à n'importe quel service.</p>
         </div>
         <div class="card text-center" data-reveal data-reveal-delay="3">
-          <img src="ASSET_CC/accesible.svg" alt="" class="card-icon" aria-hidden="true" />
+          <img src="ASSET_CC/accesible.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" />
           <h3 class="mb-2">Accessibilité</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Tarifs modulables selon les volumes. Adaptés aux petits bars comme aux grands festivals.</p>
         </div>
       </div>
     </div>
-    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true"
+    <img src="ASSET_CC/mascot.svg" alt="" class="mascotte" aria-hidden="true" loading="lazy"
          style="left: -1rem; right: auto;"
          onerror="this.style.display='none'" />
   </section>
@@ -191,24 +223,28 @@
         <div class="grid md:grid-cols-2 gap-4">
           <div>
             <label for="prenom" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">Prénom</label>
-            <input id="prenom" type="text" name="prenom" required class="input-field" placeholder="Sam" />
+            <input id="prenom" type="text" name="prenom" required class="input-field" placeholder="Gabriel" autocomplete="given-name" />
+            <p class="field-error" id="error-prenom">Veuillez entrer votre prénom.</p>
           </div>
           <div>
             <label for="nom" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">Nom</label>
-            <input id="nom" type="text" name="nom" required class="input-field" placeholder="Fabrizzi" />
+            <input id="nom" type="text" name="nom" required class="input-field" placeholder="Schmid" autocomplete="family-name" />
+            <p class="field-error" id="error-nom">Veuillez entrer votre nom.</p>
           </div>
         </div>
 
         <div>
           <label for="etablissement" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">Établissement</label>
           <input id="etablissement" type="text" name="etablissement" required class="input-field"
-                 placeholder="Bar Le Central, Festival XYZ..." />
+                 placeholder="Bar Le grand bleu, Festival Week-End au..." autocomplete="organization" />
+          <p class="field-error" id="error-etablissement">Veuillez entrer le nom de votre établissement.</p>
         </div>
 
         <div>
           <label for="email" class="block text-sm font-bold mb-1" style="font-family:'Arimo',sans-serif;">Email professionnel</label>
           <input id="email" type="email" name="email" required class="input-field"
-                 placeholder="contact@votreétablissement.ch" />
+                 placeholder="contact@votreétablissement.ch" autocomplete="email" />
+          <p class="field-error" id="error-email">Veuillez entrer un email valide.</p>
         </div>
 
         <div>
@@ -219,19 +255,57 @@
                     placeholder="Volume estimé, date d'événement, questions..."></textarea>
         </div>
 
-        <button type="submit" class="btn-submit">Envoyer ma demande</button>
+        <button type="submit" id="btn-submit" class="btn-submit">
+          <span id="btn-submit-text">Envoyer ma demande</span>
+          <span id="btn-submit-dots" class="submit-dots hidden">
+            <span></span><span></span><span></span>
+          </span>
+        </button>
 
-        <div id="form-success" class="hidden text-center py-4 font-bold" style="font-family:'Arimo',sans-serif;">
-          ✓ Message envoyé ! On revient vers vous sous 48h.
+        <div id="form-success" class="hidden success-box">
+          <div class="checkmark-wrapper">
+            <svg class="checkmark-svg" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle class="checkmark-circle" cx="26" cy="26" r="22"/>
+              <path class="checkmark-check" d="M14 27 L22 35 L38 19"/>
+            </svg>
+          </div>
+          <p class="success-title">Message envoyé !</p>
+          <p class="success-sub">On revient vers vous sous 48h.</p>
         </div>
-        <div id="form-error" class="hidden text-center py-4 font-bold" style="font-family:'Arimo',sans-serif;">
-          Une erreur s'est produite. Réessayez ou écrivez-nous directement.
+        <div id="form-error" class="hidden error-box">
+          <div class="crossmark-wrapper">
+            <svg class="crossmark-svg" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle class="crossmark-circle" cx="26" cy="26" r="22"/>
+              <path class="crossmark-cross" d="M17 17 L35 35 M35 17 L17 35"/>
+            </svg>
+          </div>
+          <p class="error-title">Erreur d'envoi</p>
+          <p class="error-sub">Réessayez ou écrivez-nous directement par mail : info@clearcup.ch</p>
         </div>
       </form>
 
-      <div class="mt-16 pt-8 flex flex-col md:flex-row items-center justify-between gap-4"
+      <div class="footer-bar mt-16 pt-8 flex flex-col md:flex-row items-center justify-between gap-4"
            style="border-top: 2px solid rgba(0,0,0,0.2); font-family:'Arimo',sans-serif; font-size:0.875rem;">
-        <p>© 2026 ClearCup — Fribourg, Suisse</p>
+        <div class="footer-credits">
+          <p>© 2026 ClearCup</p>
+          <address style="font-style:normal;">Fribourg, Suisse — <a href="mailto:info@clearcup.ch" style="color:inherit;">info@clearcup.ch</a></address>
+          <button id="dark-egg" class="dark-toggle-btn" aria-label="Activer le mode nuit">
+            <svg id="dark-icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+            </svg>
+            <svg id="dark-icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="hidden">
+              <circle cx="12" cy="12" r="5"/>
+              <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+            </svg>
+          </button>
+        </div>
+        <div class="flex items-center gap-4">
+          <button class="legal-link" data-modal="mentions">Mentions légales</button>
+          <button class="legal-link" data-modal="confidentialite">Confidentialité</button>
+        </div>
         <a href="https://instagram.com/clearcup.ch" target="_blank" rel="noopener" class="insta-link" aria-label="Instagram @clearcup.ch">
           <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
@@ -245,6 +319,77 @@
          onerror="this.style.display='none'" />
   </section>
 
+  <!-- Dark mode toast -->
+  <div id="dark-toast" class="dark-toast hidden"></div>
+
+  <!-- Curseur personnalisé -->
+  <div class="cursor-dot"></div>
+  <div class="cursor-ring"></div>
+
+  <!-- Cookie banner -->
+  <div id="cookie-banner" class="cookie-banner hidden">
+    <p class="cookie-text">Ce site utilise Google Analytics pour mesurer l'audience. Aucune donnée personnelle n'est vendue.</p>
+    <div class="cookie-actions">
+      <button id="cookie-refuse" class="cookie-btn-refuse">Refuser</button>
+      <button id="cookie-accept" class="cookie-btn-accept">Accepter</button>
+    </div>
+  </div>
+
+  <!-- Sticky CTA mobile -->
+  <div id="sticky-cta" class="sticky-cta">
+    <a href="#contact" class="btn-primary">Demander un devis</a>
+  </div>
+
   <script src="js/main.js"></script>
+
+  <!-- Schema.org structured data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "ClearCup",
+    "url": "https://sam9151.github.io/clearcup/",
+    "logo": "https://sam9151.github.io/clearcup/ASSET_CC/logo.svg",
+    "email": "info@clearcup.ch",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Fribourg",
+      "addressCountry": "CH"
+    },
+    "contactPoint": {
+      "@type": "ContactPoint",
+      "email": "info@clearcup.ch",
+      "contactType": "customer service",
+      "availableLanguage": "French"
+    },
+    "sameAs": ["https://instagram.com/clearcup.ch"]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "ClearCup — Sticker anti-soumission chimique",
+    "description": "Sticker vinyle qui couvre les verres dans les bars, clubs et festivals pour prévenir la soumission chimique. Simple à utiliser : coller sur le verre, transpercer avec une paille.",
+    "brand": {
+      "@type": "Brand",
+      "name": "ClearCup"
+    },
+    "audience": {
+      "@type": "BusinessAudience",
+      "audienceType": "Bars, clubs, festivals, organisateurs d'événements"
+    },
+    "offers": {
+      "@type": "Offer",
+      "priceCurrency": "CHF",
+      "availability": "https://schema.org/InStock",
+      "seller": {
+        "@type": "Organization",
+        "name": "ClearCup"
+      }
+    },
+    "image": "https://sam9151.github.io/clearcup/ASSET_CC/hero-product.png"
+  }
+  </script>
 </body>
 </html>
