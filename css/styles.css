@@ -275,6 +275,14 @@ h3 {
   opacity: 1;
 }
 
+/* Quand la souris est sur le nav, masque la pill active sauf sur le lien survolé */
+.nav-links:hover a.active:not(:hover) {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  padding: 0;
+}
+
 /* ── Lien Instagram footer ── */
 .insta-link {
   color: var(--black);
