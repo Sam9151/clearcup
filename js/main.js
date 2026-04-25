@@ -54,43 +54,78 @@ const legalClose   = document.getElementById('legal-close');
 
 const legalTexts = {
   mentions: `
-    <h1>Mentions légales</h1>
+    <h1 id="legal-modal-title">Mentions légales</h1>
     <h2>Éditeur du site</h2>
     <p>ClearCup<br>Fribourg, Suisse<br>Email : info@clearcup.ch</p>
     <h2>Responsable de la publication</h2>
     <p>L'équipe ClearCup — info@clearcup.ch</p>
     <h2>Hébergement</h2>
     <p>Ce site est hébergé par GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA).</p>
-    <h2>Propriété intellectuelle</h2>
-    <p>L'ensemble des contenus présents sur ce site (textes, images, visuels, logo) sont la propriété exclusive de ClearCup et sont protégés par les lois suisses sur la propriété intellectuelle. Toute reproduction sans autorisation préalable est interdite.</p>
-    <h2>Limitation de responsabilité</h2>
-    <p>ClearCup s'efforce de maintenir les informations de ce site à jour et exactes, mais ne saurait être tenu responsable d'éventuelles erreurs ou omissions.</p>
   `,
   confidentialite: `
-    <h1>Politique de confidentialité</h1>
+    <h1 id="legal-modal-title">Politique de confidentialité</h1>
+    <p>Conformément à la Loi fédérale suisse sur la protection des données (nLPD) et au Règlement général européen sur la protection des données (RGPD), nous vous informons ci-dessous de manière transparente sur le traitement de vos données personnelles.</p>
+
+    <h2>Responsable du traitement</h2>
+    <p>ClearCup<br>Fribourg, Suisse<br>Email : info@clearcup.ch</p>
+
     <h2>Données collectées</h2>
-    <p>Ce site collecte des données de navigation anonymes via Google Analytics 4 (fréquentation, pages visitées, durée de visite) uniquement si vous avez donné votre consentement.</p>
+    <p><strong>Formulaire d'inscription :</strong> si vous saisissez votre adresse email, celle-ci est collectée et conservée afin de vous informer du lancement du produit ou de vous envoyer des communications liées à ClearCup. Vous pouvez demander sa suppression à tout moment.</p>
+    <p><strong>Données de navigation (Google Analytics 4) :</strong> uniquement si vous avez donné votre consentement, nous collectons des données anonymisées de navigation (pages visitées, durée de visite, source du trafic, type d'appareil). Aucun identifiant personnel direct n'est collecté via cet outil.</p>
+
     <h2>Finalité du traitement</h2>
-    <p>Les données collectées sont utilisées exclusivement pour mesurer l'audience du site et améliorer l'expérience utilisateur. Aucune donnée personnelle n'est vendue ou transmise à des tiers à des fins commerciales.</p>
-    <h2>Cookies</h2>
-    <p>Ce site utilise un cookie de préférence pour mémoriser votre choix concernant Google Analytics. Vous pouvez modifier votre choix à tout moment en vidant le stockage local de votre navigateur.</p>
+    <p>Les adresses email collectées sont utilisées exclusivement pour vous informer du lancement et des actualités de ClearCup. Les données de navigation sont utilisées pour mesurer l'audience du site et améliorer l'expérience utilisateur.</p>
+
+    <h2>Services tiers et transfert à l'étranger</h2>
+    <p>Ce site intègre <strong>Google Analytics 4</strong> (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA). Si vous avez accepté les cookies analytiques, des données de navigation sont transmises à Google et peuvent être traitées sur des serveurs situés hors de Suisse, notamment aux États-Unis. Google LLC adhère au Data Privacy Framework UE–États-Unis. Pour en savoir plus : <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">policies.google.com/privacy</a>.</p>
+    <p>Ce site est hébergé par <strong>GitHub Pages</strong> (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA). Lors de chaque visite, votre adresse IP est traitée par GitHub à des fins techniques. Pour en savoir plus : <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener noreferrer">politique de confidentialité de GitHub</a>.</p>
+
+    <h2>Durée de conservation</h2>
+    <p>Les adresses email sont conservées jusqu'à votre désinscription ou demande de suppression. Les données Google Analytics sont conservées 14 mois sur les serveurs de Google, conformément aux paramètres de rétention configurés.</p>
+
+    <h2>Cookies et stockage local</h2>
+    <p>Ce site utilise le stockage local de votre navigateur (localStorage) pour mémoriser votre choix concernant Google Analytics. Aucun cookie tiers n'est déposé sans votre consentement préalable. Vous pouvez modifier votre choix à tout moment en vidant le stockage local de votre navigateur.</p>
+
+    <h2>Comment refuser le traitement par Google Analytics</h2>
+    <p>Vous pouvez retirer votre consentement à tout moment via la bannière de cookies ou en installant l'<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer">extension de désactivation de Google Analytics</a> pour votre navigateur.</p>
+
     <h2>Vos droits</h2>
-    <p>Conformément à la Loi fédérale suisse sur la protection des données (LPD) et au RGPD européen, vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Pour exercer ces droits, contactez-nous à info@clearcup.ch.</p>
+    <p>Conformément à la nLPD et au RGPD, vous disposez d'un droit d'accès, de rectification, de suppression, d'opposition et de portabilité de vos données. Pour exercer ces droits, contactez-nous à info@clearcup.ch. Vous avez également le droit de déposer une réclamation auprès du Préposé fédéral à la protection des données et à la transparence (PFPDT).</p>
+
     <h2>Contact</h2>
     <p>Pour toute question relative à la protection de vos données : info@clearcup.ch</p>
   `
 };
+
+const focusableSelectors = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+function trapFocus(e) {
+  const focusable = Array.from(legalModal.querySelectorAll(focusableSelectors));
+  if (!focusable.length) return;
+  const first = focusable[0];
+  const last  = focusable[focusable.length - 1];
+  if (e.key === 'Tab') {
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  }
+}
 
 function openLegal(type) {
   legalContent.innerHTML = legalTexts[type];
   legalModal.classList.remove('hidden', 'is-closing');
   requestAnimationFrame(() => legalModal.classList.add('is-open'));
   document.body.style.overflow = 'hidden';
+  legalModal.addEventListener('keydown', trapFocus);
+  setTimeout(() => legalClose.focus(), 350);
 }
 
 function closeLegal() {
   legalModal.classList.remove('is-open');
   legalModal.classList.add('is-closing');
+  legalModal.removeEventListener('keydown', trapFocus);
   legalModal.addEventListener('transitionend', () => {
     legalModal.classList.add('hidden');
     legalModal.classList.remove('is-closing');
@@ -103,6 +138,10 @@ document.querySelectorAll('.legal-link').forEach(btn => {
 });
 
 legalClose.addEventListener('click', closeLegal);
+
+legalModal.addEventListener('click', (e) => {
+  if (e.target === legalModal) closeLegal();
+});
 
 legalModal.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') closeLegal();
@@ -181,6 +220,37 @@ if (burgerBtn && mobileMenu) {
   });
 }
 
+// ── Word reveal ──
+document.querySelectorAll('[data-word-reveal]').forEach(el => {
+  const words = el.textContent.trim().split(/\s+/);
+  el.innerHTML = words.map((w, i) =>
+    `<span class="word-wrap"><span class="word" style="transition-delay:${i * 50}ms">${w}</span></span>`
+  ).join(' ');
+});
+
+const wordRevealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('words-revealed');
+      wordRevealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.4 });
+
+document.querySelectorAll('[data-word-reveal]').forEach(el => wordRevealObserver.observe(el));
+
+// ── Variable font weight reveal ──
+const vfObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('vf-revealed');
+      vfObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.5 });
+
+document.querySelectorAll('[data-vf-reveal]').forEach(el => vfObserver.observe(el));
+
 // Reveal scroll (IntersectionObserver)
 const revealObserver = new IntersectionObserver((entries) => {
   entries.forEach(entry => {
@@ -208,44 +278,30 @@ document.querySelectorAll('.btn-submit').forEach(btn => {
   });
 });
 
-// Navbar hide/show + Sticky CTA mobile
+// Navbar hide/show au scroll
 const navbar = document.getElementById('navbar');
-const stickyCta = document.getElementById('sticky-cta');
-const contactSection = document.getElementById('contact');
 let lastScrollY = window.scrollY;
-let contactVisible = false;
-
-if (stickyCta && contactSection) {
-  new IntersectionObserver((entries) => {
-    contactVisible = entries[0].isIntersecting;
-    if (contactVisible) stickyCta.classList.add('hidden-cta');
-  }, { threshold: 0.1 }).observe(contactSection);
-}
 
 window.addEventListener('scroll', () => {
   const currentScrollY = window.scrollY;
   const scrollingDown = currentScrollY > lastScrollY && currentScrollY > 80;
-
   navbar.classList.toggle('nav-hidden', scrollingDown);
-
-  if (stickyCta && !contactVisible) {
-    stickyCta.classList.toggle('hidden-cta', !scrollingDown);
-  }
-
   lastScrollY = currentScrollY;
 }, { passive: true });
 
 // ── Compteurs animés ──
 function easeOutCubic(t) { return 1 - Math.pow(1 - t, 3); }
 
-function runCounter(el) {
-  const duration = 1600;
-  const start = performance.now();
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+function runCounter(el) {
   if (el.dataset.counter !== undefined) {
     const to     = parseInt(el.dataset.to);
     const prefix = el.dataset.prefix || '';
     const suffix = el.dataset.suffix || '';
+    if (prefersReducedMotion) { el.textContent = prefix + to + suffix; return; }
+    const duration = 1600;
+    const start = performance.now();
     (function update(now) {
       const progress = Math.min((now - start) / duration, 1);
       const value    = Math.round(easeOutCubic(progress) * to);
@@ -258,6 +314,9 @@ function runCounter(el) {
     const to1    = parseInt(el.dataset.to1);
     const to2    = parseInt(el.dataset.to2);
     const suffix = el.dataset.suffix || '';
+    if (prefersReducedMotion) { el.textContent = to1 + '–' + to2 + suffix; return; }
+    const duration = 1600;
+    const start = performance.now();
     (function update(now) {
       const progress = Math.min((now - start) / duration, 1);
       const eased    = easeOutCubic(progress);
@@ -290,7 +349,9 @@ const activeObserver = new IntersectionObserver((entries) => {
     if (entry.isIntersecting) {
       const id = entry.target.getAttribute('id');
       navLinks.forEach(link => {
-        link.classList.toggle('active', link.getAttribute('href') === `#${id}`);
+        const isActive = link.getAttribute('href') === `#${id}`;
+        link.classList.toggle('active', isActive);
+        link.setAttribute('aria-current', isActive ? 'true' : 'false');
       });
     }
   });
@@ -307,6 +368,7 @@ function validateField(input, errorId, checkFn) {
   const valid = checkFn(input.value.trim());
   input.classList.toggle('is-valid', valid);
   input.classList.toggle('is-error', !valid);
+  input.setAttribute('aria-invalid', valid ? 'false' : 'true');
   if (error) error.classList.toggle('visible', !valid);
   return valid;
 }
@@ -382,6 +444,90 @@ darkEgg?.addEventListener('click', () => {
   setDarkMode(!document.body.classList.contains('dark'));
 });
 
+// ── Parallax hero ──
+const heroImgEl   = document.querySelector('.hero-img');
+const heroSection = document.getElementById('hero');
+
+if (heroImgEl && heroSection && !prefersReducedMotion) {
+  const desktopMQ = window.matchMedia('(min-width: 768px)');
+  window.addEventListener('scroll', () => {
+    if (!desktopMQ.matches) return;
+    if (heroSection.getBoundingClientRect().bottom > 0) {
+      heroImgEl.style.transform = `translateY(${window.scrollY * 0.25}px)`;
+    }
+  }, { passive: true });
+}
+
+// ── Effet magnétique sur les boutons CTA ──
+if (window.matchMedia('(hover: hover) and (pointer: fine)').matches && !prefersReducedMotion) {
+  document.querySelectorAll('.btn-primary').forEach(btn => {
+    btn.addEventListener('mousemove', (e) => {
+      const rect   = btn.getBoundingClientRect();
+      const deltaX = ((e.clientX - rect.left) / rect.width  - 0.5) * 10;
+      const deltaY = ((e.clientY - rect.top)  / rect.height - 0.5) * 6;
+      btn.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.transform = '';
+    });
+  });
+}
+
+// ── Confetti ──
+function launchConfetti() {
+  if (prefersReducedMotion) return;
+  const canvas = document.createElement('canvas');
+  canvas.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  document.body.appendChild(canvas);
+  const ctx = canvas.getContext('2d');
+
+  const colors = ['#64A4F6', '#000000', '#B8D4F8', '#4A90D9', '#FFFFFF'];
+  const cx = canvas.width / 2;
+  const cy = canvas.height * 0.72;
+
+  const particles = Array.from({ length: 110 }, () => ({
+    x: cx + (Math.random() - 0.5) * 80,
+    y: cy,
+    vx: (Math.random() - 0.5) * 15,
+    vy: -(Math.random() * 18 + 6),
+    color: colors[Math.floor(Math.random() * colors.length)],
+    w: Math.random() * 10 + 4,
+    h: Math.random() * 5 + 3,
+    rot: Math.random() * Math.PI * 2,
+    rotV: (Math.random() - 0.5) * 0.25,
+  }));
+
+  const duration = 3200;
+  let t0 = null;
+
+  (function draw(ts) {
+    if (!t0) t0 = ts;
+    const elapsed = ts - t0;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    particles.forEach(p => {
+      p.x   += p.vx;
+      p.y   += p.vy;
+      p.vy  += 0.35;
+      p.vx  *= 0.98;
+      p.rot += p.rotV;
+
+      ctx.save();
+      ctx.translate(p.x, p.y);
+      ctx.rotate(p.rot);
+      ctx.globalAlpha = Math.max(0, 1 - elapsed / duration);
+      ctx.fillStyle   = p.color;
+      ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      ctx.restore();
+    });
+
+    if (elapsed < duration) requestAnimationFrame(draw);
+    else canvas.remove();
+  })(performance.now());
+}
+
 // Gestion du formulaire Formspree (AJAX)
 const form = document.getElementById('contact-form');
 const successMsg = document.getElementById('form-success');
@@ -423,6 +569,7 @@ if (form) {
         form.reset();
         setLoading(false);
         showFeedback(successMsg);
+        launchConfetti();
       } else {
         throw new Error('Formspree error');
       }

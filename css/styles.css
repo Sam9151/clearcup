@@ -1,5 +1,42 @@
 /* ClearCup — Design System Neo-Brutaliste */
 
+/* ── Polices self-hosted ── */
+@font-face {
+  font-family: 'Bagel Fat One';
+  src: url('../TYPO/BagelFatOne-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Arimo';
+  src: url('../TYPO/Arimo-VariableFont_wght.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Arimo';
+  src: url('../TYPO/Arimo-Italic-VariableFont_wght.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* ── Hidden override pour éléments avec display propre ── */
+.cookie-banner.hidden,
+#mobile-menu.hidden,
+#dark-toast.hidden {
+  display: none !important;
+}
+
+/* ── Responsive overrides (Play CDN ajoutait !important, build prod non) ── */
+@media (min-width: 768px) {
+  #burger-btn { display: none !important; }
+}
+
 /* ── Variables ── */
 :root {
   --white: #FFFFFF;
@@ -86,6 +123,8 @@ html {
 /* ── Réduction padding-top des sections ── */
 section:not(#hero) {
   padding-top: 3rem !important;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
 }
 
 /* ── Base ── */
@@ -93,6 +132,9 @@ body {
   font-family: 'Arimo', sans-serif;
   background-color: var(--white);
   color: var(--black);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 p {
@@ -210,11 +252,18 @@ h3 {
   letter-spacing: 0.05em;
   color: var(--black);
   text-decoration: none;
-  transition: opacity 150ms ease;
+  transition: background var(--dur-fast) var(--ease-out),
+              border-color var(--dur-fast) var(--ease-out),
+              box-shadow var(--dur-fast) var(--ease-out),
+              padding var(--dur-fast) var(--ease-out);
 }
 
 .nav-links a:hover {
-  opacity: 0.5;
+  background: rgba(100, 164, 246, 0.25);
+  border: var(--border);
+  border-radius: var(--radius-btn);
+  box-shadow: var(--shadow-dark-sm);
+  padding: 0.25rem 0.75rem;
 }
 
 .nav-links a.active {
@@ -711,10 +760,30 @@ h3 {
   display: block;
 }
 
+/* ── Nav entrance animation ── */
+@keyframes nav-enter {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.nav-logo {
+  animation: nav-enter 400ms var(--ease-out) 50ms both;
+}
+
+.nav-links li:nth-child(1) { animation: nav-enter 400ms var(--ease-out) 150ms both; }
+.nav-links li:nth-child(2) { animation: nav-enter 400ms var(--ease-out) 250ms both; }
+.nav-links li:nth-child(3) { animation: nav-enter 400ms var(--ease-out) 350ms both; }
+.nav-links li:nth-child(4) { animation: nav-enter 400ms var(--ease-out) 450ms both; }
+
+.nav-cta {
+  animation: nav-enter 400ms var(--ease-out) 550ms both;
+}
+
 /* ── Hero pleine largeur ── */
 .hero-section {
   position: relative;
   width: 100%;
+  overflow: hidden;
 }
 
 .hero-img {
@@ -795,6 +864,34 @@ h3 {
 .section-relative {
   position: relative;
   overflow: hidden;
+}
+
+/* ── Word reveal ── */
+[data-word-reveal] .word-wrap {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  line-height: inherit;
+}
+
+[data-word-reveal] .word {
+  display: inline-block;
+  transform: translateY(110%);
+  transition: transform 600ms var(--ease-spring);
+}
+
+[data-word-reveal].words-revealed .word {
+  transform: translateY(0);
+}
+
+/* ── Variable font weight reveal ── */
+[data-vf-reveal] {
+  font-variation-settings: 'wght' 300;
+  transition: font-variation-settings 700ms var(--ease-out);
+}
+
+[data-vf-reveal].vf-revealed {
+  font-variation-settings: 'wght' 500;
 }
 
 /* ── Reveal animations ── */
@@ -1065,7 +1162,7 @@ h3 {
     align-items: center;
     text-align: center;
     gap: 1rem;
-    bottom: 5.5rem;
+    bottom: 1.5rem;
     padding: 1.25rem;
     width: calc(100% - 2rem);
     max-width: 100%;
@@ -1083,36 +1180,6 @@ h3 {
   }
 }
 
-/* ── Sticky CTA mobile ── */
-.sticky-cta {
-  display: none;
-}
-
-@media (max-width: 767px) {
-  .sticky-cta {
-    display: flex;
-    justify-content: center;
-    position: fixed;
-    bottom: 1.25rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 40;
-    transition: opacity 300ms ease, transform 300ms ease;
-  }
-
-  .sticky-cta.hidden-cta {
-    opacity: 0;
-    transform: translateX(-50%) translateY(20px);
-    pointer-events: none;
-  }
-
-  .sticky-cta .btn-primary {
-    padding: 0.75rem 2rem;
-    font-size: 0.95rem;
-    box-shadow: 4px 4px 0 #000000;
-    white-space: nowrap;
-  }
-}
 
 /* ── Prevent iOS zoom ── */
 @media screen and (max-width: 768px) {
@@ -1214,20 +1281,40 @@ h3 {
   justify-content: center;
   width: 34px;
   height: 34px;
-  background: var(--white);
-  border: var(--border);
-  border-radius: 50%;
-  box-shadow: var(--shadow-dark-sm);
-  cursor: pointer;
-  color: var(--black);
-  transition: transform var(--dur-fast) var(--ease-out),
-              box-shadow var(--dur-fast) var(--ease-out);
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  cursor: default;
+  color: transparent;
   flex-shrink: 0;
+  outline: none !important;
 }
 
-.dark-toggle-btn:hover {
-  transform: translate(2px, 2px);
-  box-shadow: none;
+.dark-toggle-btn:focus-visible {
+  outline: none !important;
+}
+
+/* ── Accessibilité : prefers-reduced-motion ── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  [data-reveal] {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .mascotte {
+    animation: none;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
 }
 
 /* ── Toast notification ── */
