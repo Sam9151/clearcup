@@ -852,22 +852,6 @@ h3 {
   font-size: 0.875rem;
 }
 
-/* ── Mascotte ── */
-.mascotte {
-  position: absolute;
-  bottom: 2rem;
-  right: -1rem;
-  width: 110px;
-  z-index: 10;
-  animation: float 3s ease-in-out infinite;
-  pointer-events: none;
-  will-change: transform;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50%       { transform: translateY(-12px); }
-}
 
 .section-relative {
   position: relative;
@@ -1316,10 +1300,6 @@ h3 {
     transition: none;
   }
 
-  .mascotte {
-    animation: none;
-  }
-
   html {
     scroll-behavior: auto;
   }
@@ -1373,8 +1353,7 @@ body.dark-transitioning .cookie-btn-refuse,
 body.dark-transitioning .cookie-btn-accept,
 body.dark-transitioning .legal-modal,
 body.dark-transitioning .legal-close,
-body.dark-transitioning section,
-body.dark-transitioning .mascotte {
+body.dark-transitioning section {
   transition: background-color 500ms var(--ease-out),
               color 500ms var(--ease-out),
               border-color 500ms var(--ease-out),
