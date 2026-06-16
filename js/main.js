@@ -52,50 +52,117 @@ const legalModal   = document.getElementById('legal-modal');
 const legalContent = document.getElementById('legal-content');
 const legalClose   = document.getElementById('legal-close');
 
-const legalTexts = {
-  mentions: `
-    <h1 id="legal-modal-title">Mentions légales</h1>
-    <h2>Éditeur du site</h2>
-    <p>ClearCup<br>Fribourg, Suisse<br>Email : info@clearcup.ch</p>
-    <h2>Responsable de la publication</h2>
-    <p>L'équipe ClearCup — info@clearcup.ch</p>
-    <h2>Hébergement</h2>
-    <p>Ce site est hébergé par GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA).</p>
-  `,
-  confidentialite: `
-    <h1 id="legal-modal-title">Politique de confidentialité</h1>
-    <p>Conformément à la Loi fédérale suisse sur la protection des données (nLPD) et au Règlement général européen sur la protection des données (RGPD), nous vous informons ci-dessous de manière transparente sur le traitement de vos données personnelles.</p>
+// Detect page language
+const pageLang = (function() {
+  const l = document.documentElement.lang || 'fr';
+  if (l.startsWith('de')) return 'de';
+  if (l.startsWith('en')) return 'en';
+  return 'fr';
+})();
 
-    <h2>Responsable du traitement</h2>
-    <p>ClearCup<br>Fribourg, Suisse<br>Email : info@clearcup.ch</p>
-
-    <h2>Données collectées</h2>
-    <p><strong>Formulaire d'inscription :</strong> si vous saisissez votre adresse email, celle-ci est collectée et conservée afin de vous informer du lancement du produit ou de vous envoyer des communications liées à ClearCup. Vous pouvez demander sa suppression à tout moment.</p>
-    <p><strong>Données de navigation (Google Analytics 4) :</strong> uniquement si vous avez donné votre consentement, nous collectons des données anonymisées de navigation (pages visitées, durée de visite, source du trafic, type d'appareil). Aucun identifiant personnel direct n'est collecté via cet outil.</p>
-
-    <h2>Finalité du traitement</h2>
-    <p>Les adresses email collectées sont utilisées exclusivement pour vous informer du lancement et des actualités de ClearCup. Les données de navigation sont utilisées pour mesurer l'audience du site et améliorer l'expérience utilisateur.</p>
-
-    <h2>Services tiers et transfert à l'étranger</h2>
-    <p>Ce site intègre <strong>Google Analytics 4</strong> (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA). Si vous avez accepté les cookies analytiques, des données de navigation sont transmises à Google et peuvent être traitées sur des serveurs situés hors de Suisse, notamment aux États-Unis. Google LLC adhère au Data Privacy Framework UE–États-Unis. Pour en savoir plus : <a href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">policies.google.com/privacy</a>.</p>
-    <p>Ce site est hébergé par <strong>GitHub Pages</strong> (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA). Lors de chaque visite, votre adresse IP est traitée par GitHub à des fins techniques. Pour en savoir plus : <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement" target="_blank" rel="noopener noreferrer">politique de confidentialité de GitHub</a>.</p>
-
-    <h2>Durée de conservation</h2>
-    <p>Les adresses email sont conservées jusqu'à votre désinscription ou demande de suppression. Les données Google Analytics sont conservées 14 mois sur les serveurs de Google, conformément aux paramètres de rétention configurés.</p>
-
-    <h2>Cookies et stockage local</h2>
-    <p>Ce site utilise le stockage local de votre navigateur (localStorage) pour mémoriser votre choix concernant Google Analytics. Aucun cookie tiers n'est déposé sans votre consentement préalable. Vous pouvez modifier votre choix à tout moment en vidant le stockage local de votre navigateur.</p>
-
-    <h2>Comment refuser le traitement par Google Analytics</h2>
-    <p>Vous pouvez retirer votre consentement à tout moment via la bannière de cookies ou en installant l'<a href="https://tools.google.com/dlpage/gaoptout" target="_blank" rel="noopener noreferrer">extension de désactivation de Google Analytics</a> pour votre navigateur.</p>
-
-    <h2>Vos droits</h2>
-    <p>Conformément à la nLPD et au RGPD, vous disposez d'un droit d'accès, de rectification, de suppression, d'opposition et de portabilité de vos données. Pour exercer ces droits, contactez-nous à info@clearcup.ch. Vous avez également le droit de déposer une réclamation auprès du Préposé fédéral à la protection des données et à la transparence (PFPDT).</p>
-
-    <h2>Contact</h2>
-    <p>Pour toute question relative à la protection de vos données : info@clearcup.ch</p>
-  `
+const allLegalTexts = {
+  fr: {
+    mentions: `
+      <h1 id="legal-modal-title">Mentions légales</h1>
+      <h2>Éditeur du site</h2>
+      <p>ClearCup<br>Fribourg, Suisse<br>Email : info@clearcup.ch</p>
+      <h2>Responsable de la publication</h2>
+      <p>L'équipe ClearCup — info@clearcup.ch</p>
+      <h2>Hébergement</h2>
+      <p>Ce site est hébergé par GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA).</p>
+    `,
+    confidentialite: `
+      <h1 id="legal-modal-title">Politique de confidentialité</h1>
+      <p>Conformément à la Loi fédérale sur la protection des données (LPD) et au Règlement général sur la protection des données (RGPD), nous vous informons ci-dessous de manière transparente sur le traitement de vos données personnelles.</p>
+      <h2>Responsable du traitement</h2>
+      <p>ClearCup<br>Fribourg, Suisse<br>Email : info@clearcup.ch</p>
+      <h2>Données collectées et finalités</h2>
+      <p><strong>Formulaire de contact :</strong> nom, adresse email et message collectés via Formspree (Formspree Inc., USA) dans le but de répondre à vos demandes commerciales. Formspree est soumis au Privacy Shield UE-États-Unis. Données conservées le temps nécessaire au traitement de votre demande.</p>
+      <p><strong>Analyse d'audience :</strong> si vous avez accepté les cookies analytiques, nous utilisons Google Analytics (Google Ireland Limited) pour mesurer l'audience du site de manière anonymisée. L'anonymisation de l'IP est activée. Données conservées 14 mois.</p>
+      <p><strong>Polices :</strong> les polices utilisées sur ce site sont auto-hébergées. Aucune donnée n'est transmise à Google Fonts ou à tout autre service tiers pour le chargement des polices.</p>
+      <p><strong>Cookies :</strong> voir notre politique de cookies accessible via la bannière de consentement.</p>
+      <h2>Services tiers et transfert à l'étranger</h2>
+      <p>Ce site intègre <strong>Google Analytics 4</strong> (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA) uniquement avec votre consentement. Google LLC adhère au Data Privacy Framework UE–États-Unis.</p>
+      <p>Ce site est hébergé par <strong>GitHub Pages</strong> (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA). Votre adresse IP est traitée par GitHub à des fins techniques.</p>
+      <p>Le formulaire de contact est traité par <strong>Formspree</strong> (Formspree Inc., 1941 N. Alamo St, San Antonio, TX 78215, USA). Les données soumises via le formulaire sont transmises à Formspree.</p>
+      <h2>Cookies et stockage local</h2>
+      <p>Ce site utilise le stockage local de votre navigateur (localStorage) pour mémoriser votre choix de consentement. Aucun cookie tiers n'est déposé sans votre consentement préalable.</p>
+      <h2>Droits des utilisateurs</h2>
+      <p>Conformément à la Loi fédérale sur la protection des données (LPD) et au Règlement général sur la protection des données (RGPD), vous disposez d'un droit d'accès, de rectification, d'effacement, de portabilité et d'opposition au traitement de vos données personnelles. Contactez-nous à info@clearcup.ch.</p>
+      <p>Vous avez également le droit de déposer une réclamation auprès du Préposé fédéral à la protection des données et à la transparence (PFPDT).</p>
+      <h2>Contact</h2>
+      <p>Pour toute question relative à la protection de vos données : info@clearcup.ch</p>
+    `
+  },
+  de: {
+    mentions: `
+      <h1 id="legal-modal-title">Impressum</h1>
+      <h2>Herausgeber</h2>
+      <p>ClearCup<br>Freiburg, Schweiz<br>E-Mail: info@clearcup.ch</p>
+      <h2>Verantwortlicher für die Veröffentlichung</h2>
+      <p>Das ClearCup-Team — info@clearcup.ch</p>
+      <h2>Hosting</h2>
+      <p>Diese Website wird von GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA) gehostet.</p>
+    `,
+    confidentialite: `
+      <h1 id="legal-modal-title">Datenschutzerklärung</h1>
+      <p>Gemäss dem Bundesgesetz über den Datenschutz (DSG) und der Datenschutz-Grundverordnung (DSGVO) informieren wir Sie nachfolgend transparent über die Bearbeitung Ihrer Personendaten.</p>
+      <h2>Verantwortlicher</h2>
+      <p>ClearCup<br>Freiburg, Schweiz<br>E-Mail: info@clearcup.ch</p>
+      <h2>Erhobene Daten und Zwecke</h2>
+      <p><strong>Kontaktformular:</strong> Name, E-Mail-Adresse und Nachricht werden über Formspree (Formspree Inc., USA) erhoben, um Ihre Geschäftsanfragen zu bearbeiten. Die Daten werden nur so lange aufbewahrt, wie es für die Bearbeitung Ihrer Anfrage erforderlich ist.</p>
+      <p><strong>Besucheranalyse:</strong> Wenn Sie der Nutzung von Analyse-Cookies zugestimmt haben, verwenden wir Google Analytics (Google Ireland Limited), um die Besucherzahlen der Website anonymisiert zu messen. Die IP-Anonymisierung ist aktiviert. Die Daten werden 14 Monate aufbewahrt.</p>
+      <p><strong>Schriftarten:</strong> Die auf dieser Website verwendeten Schriftarten sind selbst gehostet. Es werden keine Daten an Google Fonts oder andere Drittanbieter übermittelt.</p>
+      <p><strong>Cookies:</strong> Informationen zu Cookies finden Sie in unserem Cookie-Hinweis, der beim ersten Besuch erscheint.</p>
+      <h2>Drittanbieter und Übermittlung ins Ausland</h2>
+      <p>Diese Website integriert <strong>Google Analytics 4</strong> (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA) ausschliesslich mit Ihrer Einwilligung. Google LLC nimmt am EU-US-Datenschutzrahmen teil.</p>
+      <p>Diese Website wird von <strong>GitHub Pages</strong> (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA) gehostet. Ihre IP-Adresse wird von GitHub für technische Zwecke verarbeitet.</p>
+      <p>Das Kontaktformular wird von <strong>Formspree</strong> (Formspree Inc., 1941 N. Alamo St, San Antonio, TX 78215, USA) verarbeitet.</p>
+      <h2>Cookies und lokaler Speicher</h2>
+      <p>Diese Website verwendet den lokalen Speicher Ihres Browsers (localStorage), um Ihre Einwilligungsentscheidung zu speichern. Ohne Ihre ausdrückliche Einwilligung werden keine Drittanbieter-Cookies gesetzt.</p>
+      <h2>Ihre Rechte</h2>
+      <p>Gemäss dem Bundesgesetz über den Datenschutz (DSG) und der Datenschutz-Grundverordnung (DSGVO) haben Sie das Recht auf Auskunft, Berichtigung, Löschung, Datenübertragbarkeit und Widerspruch gegen die Verarbeitung Ihrer Personendaten. Kontaktieren Sie uns unter info@clearcup.ch.</p>
+      <p>Sie haben ausserdem das Recht, eine Beschwerde beim Eidgenössischen Datenschutz- und Öffentlichkeitsbeauftragten (EDÖB) einzureichen.</p>
+      <h2>Kontakt</h2>
+      <p>Bei Fragen zum Datenschutz: info@clearcup.ch</p>
+    `
+  },
+  en: {
+    mentions: `
+      <h1 id="legal-modal-title">Legal Notice</h1>
+      <h2>Publisher</h2>
+      <p>ClearCup<br>Fribourg, Switzerland<br>Email: info@clearcup.ch</p>
+      <h2>Publication Manager</h2>
+      <p>The ClearCup team — info@clearcup.ch</p>
+      <h2>Hosting</h2>
+      <p>This website is hosted by GitHub Pages (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA).</p>
+    `,
+    confidentialite: `
+      <h1 id="legal-modal-title">Privacy Policy</h1>
+      <p>In accordance with the Swiss Federal Act on Data Protection (FADP) and the General Data Protection Regulation (GDPR), we inform you transparently about the processing of your personal data.</p>
+      <h2>Data Controller</h2>
+      <p>ClearCup<br>Fribourg, Switzerland<br>Email: info@clearcup.ch</p>
+      <h2>Data Collected and Purposes</h2>
+      <p><strong>Contact Form:</strong> name, email address and message are collected via Formspree (Formspree Inc., USA) for the purpose of responding to your commercial inquiries. Data is retained for as long as necessary to process your request.</p>
+      <p><strong>Traffic Analysis:</strong> if you have accepted analytical cookies, we use Google Analytics (Google Ireland Limited) to measure website audience in an anonymized manner. IP anonymization is enabled. Data is retained for 14 months.</p>
+      <p><strong>Fonts:</strong> the fonts used on this website are self-hosted. No data is transmitted to Google Fonts or any other third-party service for font loading.</p>
+      <p><strong>Cookies:</strong> see our cookie policy accessible via the consent banner.</p>
+      <h2>Third-Party Services and International Transfers</h2>
+      <p>This website integrates <strong>Google Analytics 4</strong> (Google LLC, 1600 Amphitheatre Parkway, Mountain View, CA 94043, USA) only with your consent. Google LLC participates in the EU-US Data Privacy Framework.</p>
+      <p>This website is hosted by <strong>GitHub Pages</strong> (GitHub, Inc., 88 Colin P Kelly Jr St, San Francisco, CA 94107, USA). Your IP address is processed by GitHub for technical purposes.</p>
+      <p>The contact form is processed by <strong>Formspree</strong> (Formspree Inc., 1941 N. Alamo St, San Antonio, TX 78215, USA). Data submitted via the form is transmitted to Formspree.</p>
+      <h2>Cookies and Local Storage</h2>
+      <p>This website uses your browser's local storage (localStorage) to remember your consent choice. No third-party cookies are set without your explicit consent.</p>
+      <h2>Your Rights</h2>
+      <p>In accordance with the Swiss Federal Act on Data Protection (FADP) and the General Data Protection Regulation (GDPR), you have the right to access, rectify, erase, port and object to the processing of your personal data. Contact us at info@clearcup.ch.</p>
+      <p>You also have the right to lodge a complaint with the Federal Data Protection and Information Commissioner (FDPIC).</p>
+      <h2>Contact</h2>
+      <p>For any questions regarding data protection: info@clearcup.ch</p>
+    `
+  }
 };
+
+const legalTexts = allLegalTexts[pageLang];
 
 const focusableSelectors = 'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -149,22 +216,22 @@ legalModal.addEventListener('keydown', (e) => {
 
 // ── Cookie banner ──
 const cookieBanner = document.getElementById('cookie-banner');
-const consent = localStorage.getItem('cc_consent');
+const consent = localStorage.getItem('clearcup_consent');
 
-if (consent === 'accepted') {
+if (consent === 'all') {
   loadGA();
 } else if (!consent) {
   cookieBanner.classList.remove('hidden');
 }
 
-document.getElementById('cookie-accept')?.addEventListener('click', () => {
-  localStorage.setItem('cc_consent', 'accepted');
+document.getElementById('cookie-accept-all')?.addEventListener('click', () => {
+  localStorage.setItem('clearcup_consent', 'all');
   loadGA();
   cookieBanner.classList.add('hidden');
 });
 
-document.getElementById('cookie-refuse')?.addEventListener('click', () => {
-  localStorage.setItem('cc_consent', 'refused');
+document.getElementById('cookie-essential')?.addEventListener('click', () => {
+  localStorage.setItem('clearcup_consent', 'essential');
   cookieBanner.classList.add('hidden');
 });
 
@@ -224,7 +291,7 @@ if (burgerBtn && mobileMenu) {
 document.querySelectorAll('[data-word-reveal]').forEach(el => {
   const words = el.textContent.trim().split(/\s+/);
   el.innerHTML = words.map((w, i) =>
-    `<span class="word-wrap"><span class="word" style="transition-delay:${i * 50}ms">${w}</span></span>`
+    `<span class="word-wrap"><span class="word" style="transition-delay:${i * 28}ms">${w}</span></span>`
   ).join(' ');
 });
 
@@ -389,60 +456,39 @@ validations.forEach(({ id, error, check }) => {
   });
 });
 
-// ── Dark mode easter egg ──
-const darkEgg      = document.getElementById('dark-egg');
-const darkToast    = document.getElementById('dark-toast');
-const darkIconMoon = document.getElementById('dark-icon-moon');
-const darkIconSun  = document.getElementById('dark-icon-sun');
-const navLogo      = document.querySelector('.nav-logo img');
-let toastTimer;
+// ── Nav overflow → burger mode dynamique ──
+// Dès qu'un item du menu desktop passe sur 2 lignes, le burger remplace les liens
+(function initNavCollapse() {
+  const navbarEl   = document.getElementById('navbar');
+  const navLinksEl = document.querySelector('.nav-links');
+  const navInnerEl = document.querySelector('.nav-inner');
+  if (!navbarEl || !navLinksEl || !navInnerEl) return;
 
-function updateDarkIcon(on) {
-  if (!darkIconMoon || !darkIconSun) return;
-  darkIconMoon.classList.toggle('hidden', on);
-  darkIconSun.classList.toggle('hidden', !on);
-}
+  function checkOverflow() {
+    // Rend nav-links temporairement mesurable même si déjà caché
+    const prevDisplay    = navLinksEl.style.display;
+    const prevVisibility = navLinksEl.style.visibility;
+    const prevPosition   = navLinksEl.style.position;
 
-function updateLogo(on) {
-  if (!navLogo) return;
-  navLogo.src = on ? 'ASSET_CC/logo-dark.svg' : 'ASSET_CC/logo.svg';
-}
+    navLinksEl.style.display    = 'flex';
+    navLinksEl.style.visibility = 'hidden';
+    navLinksEl.style.position   = 'absolute';
 
-function setDarkMode(on) {
-  document.body.classList.add('dark-transitioning');
-  document.body.classList.toggle('dark', on);
-  localStorage.setItem('cc_dark', on ? '1' : '0');
+    // scrollWidth > offsetWidth → les items débordent horizontalement
+    const overflows = navInnerEl.scrollWidth > navInnerEl.offsetWidth;
 
-  const themeMeta = document.querySelector('meta[name="theme-color"]');
-  if (themeMeta) themeMeta.content = on ? '#0B0B14' : '#FFFFFF';
+    navLinksEl.style.display    = prevDisplay;
+    navLinksEl.style.visibility = prevVisibility;
+    navLinksEl.style.position   = prevPosition;
 
-  setTimeout(() => document.body.classList.remove('dark-transitioning'), 600);
+    navbarEl.classList.toggle('nav-collapsed', overflows);
+  }
 
-  updateDarkIcon(on);
-  updateLogo(on);
-
-  clearTimeout(toastTimer);
-  darkToast.textContent = on ? '🌙 Mode nuit activé' : '☀️ Mode jour activé';
-  darkToast.classList.remove('hidden');
-  requestAnimationFrame(() => requestAnimationFrame(() => darkToast.classList.add('is-visible')));
-  toastTimer = setTimeout(() => {
-    darkToast.classList.remove('is-visible');
-    darkToast.addEventListener('transitionend', () => darkToast.classList.add('hidden'), { once: true });
-  }, 2200);
-}
-
-// Restaure la préférence au chargement (sans transition)
-if (localStorage.getItem('cc_dark') === '1') {
-  document.body.classList.add('dark');
-  const themeMeta = document.querySelector('meta[name="theme-color"]');
-  if (themeMeta) themeMeta.content = '#0B0B14';
-  updateDarkIcon(true);
-  updateLogo(true);
-}
-
-darkEgg?.addEventListener('click', () => {
-  setDarkMode(!document.body.classList.contains('dark'));
-});
+  // Observer la largeur du nav-inner
+  new ResizeObserver(checkOverflow).observe(navInnerEl);
+  // Passe initiale au chargement
+  checkOverflow();
+})();
 
 // ── Parallax hero ──
 const heroImgEl   = document.querySelector('.hero-img');
@@ -528,6 +574,55 @@ function launchConfetti() {
   })(performance.now());
 }
 
+// ── FAQ open/close animation ──
+document.querySelectorAll('.faq-item').forEach(details => {
+  const summary = details.querySelector('.faq-question');
+  const answer  = details.querySelector('.faq-answer');
+  if (!summary || !answer) return;
+
+  summary.addEventListener('click', (e) => {
+    e.preventDefault();
+
+    if (details.open) {
+      // Fermeture animée
+      const height = answer.offsetHeight;
+      answer.style.overflow  = 'hidden';
+      answer.style.height    = height + 'px';
+      answer.style.opacity   = getComputedStyle(answer).opacity;
+
+      requestAnimationFrame(() => {
+        answer.style.transition = 'height 240ms cubic-bezier(0.4,0,1,1), opacity 200ms ease-in';
+        answer.style.height  = '0';
+        answer.style.opacity = '0';
+
+        answer.addEventListener('transitionend', () => {
+          details.open = false;
+          answer.style.cssText = '';
+        }, { once: true });
+      });
+
+    } else {
+      // Ouverture animée
+      details.open = true;
+      const height = answer.scrollHeight;
+      answer.style.overflow  = 'hidden';
+      answer.style.height    = '0';
+      answer.style.opacity   = '0';
+
+      requestAnimationFrame(() => requestAnimationFrame(() => {
+        answer.style.transition = 'height 300ms cubic-bezier(0.22,1,0.36,1), opacity 260ms ease-out';
+        answer.style.height  = height + 'px';
+        answer.style.opacity = '0.85';
+
+        answer.addEventListener('transitionend', (ev) => {
+          if (ev.propertyName !== 'height') return;
+          answer.style.cssText = '';
+        }, { once: true });
+      }));
+    }
+  });
+});
+
 // Gestion du formulaire Formspree (AJAX)
 const form = document.getElementById('contact-form');
 const successMsg = document.getElementById('form-success');
@@ -579,3 +674,5 @@ if (form) {
     }
   });
 }
+
+// Lang switcher géré par script inline dans chaque page HTML

@@ -1,9 +1,137 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+
   <url>
     <loc>https://clearcup.ch/</loc>
-    <lastmod>2026-04-26</lastmod>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/index.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/index.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/"/>
+    <lastmod>2026-06-12</lastmod>
     <changefreq>monthly</changefreq>
     <priority>1.0</priority>
   </url>
+
+  <url>
+    <loc>https://clearcup.ch/de/index.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/index.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/index.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/en/index.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/index.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/index.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/guide-soumission-chimique-suisse.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/guide-soumission-chimique-suisse.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/leitfaden-k-o-tropfen-schweiz.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/guide-drink-spiking-switzerland.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/guide-soumission-chimique-suisse.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/de/leitfaden-k-o-tropfen-schweiz.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/guide-soumission-chimique-suisse.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/leitfaden-k-o-tropfen-schweiz.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/guide-drink-spiking-switzerland.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/guide-soumission-chimique-suisse.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/en/guide-drink-spiking-switzerland.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/guide-soumission-chimique-suisse.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/leitfaden-k-o-tropfen-schweiz.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/guide-drink-spiking-switzerland.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/guide-soumission-chimique-suisse.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/protection-verre-bar-festival.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/protection-verre-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/glasschutz-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/drink-protection-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/protection-verre-bar-festival.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/de/glasschutz-bar-festival.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/protection-verre-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/glasschutz-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/drink-protection-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/protection-verre-bar-festival.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/en/drink-protection-bar-festival.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/protection-verre-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/glasschutz-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/drink-protection-bar-festival.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/protection-verre-bar-festival.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/partenaires.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/partenaires.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/partner-werden.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/become-a-partner.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/partenaires.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/de/partner-werden.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/partenaires.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/partner-werden.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/become-a-partner.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/partenaires.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://clearcup.ch/en/become-a-partner.html</loc>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://clearcup.ch/partenaires.html"/>
+    <xhtml:link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/partner-werden.html"/>
+    <xhtml:link rel="alternate" hreflang="en" href="https://clearcup.ch/en/become-a-partner.html"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://clearcup.ch/partenaires.html"/>
+    <lastmod>2026-06-12</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
 </urlset>

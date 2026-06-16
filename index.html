@@ -1,73 +1,110 @@
 <!DOCTYPE html>
 <html lang="fr-CH">
 <head>
-  <!-- Google Tag Manager -->
-  <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-  new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-  j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-  'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-  })(window,document,'script','dataLayer','GTM-N34RZ3WS');</script>
-  <!-- End Google Tag Manager -->
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ClearCup — Sticker anti-soumission chimique pour bars &amp; festivals</title>
-  <meta name="description" content="ClearCup est un sticker vinyle anti-soumission chimique pour bars, clubs et festivals. Simple, efficace, accessible." />
+  <!-- SEO: title optimisé, mot-clé en tête -->
+  <title>ClearCup — Protection verre anti-soumission chimique | Bars &amp; Festivals Suisse</title>
+  <!-- SEO: meta description, mot-clé + CTA -->
+  <meta name="description" content="ClearCup protège vos clients contre la soumission chimique. Sticker vinyle anti-GHB pour bars, clubs et festivals en Suisse romande. Simple, discret, efficace." />
+  <!-- SEO: indexation explicite -->
+  <meta name="robots" content="index, follow, max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
   <link rel="canonical" href="https://clearcup.ch/" />
+  <link rel="privacy-policy" href="/#confidentialite" />
+  <!-- SEO: géolocalisation Suisse romande -->
+  <meta name="geo.region" content="CH-FR" />
+  <meta name="geo.placename" content="Fribourg, Suisse" />
+  <meta name="geo.position" content="46.8065;7.1620" />
+  <meta name="ICBM" content="46.8065, 7.1620" />
+  <meta http-equiv="content-language" content="fr-CH" />
 
-  <!-- Open Graph -->
+  <!-- SEO: Open Graph optimisé -->
   <meta property="og:type"        content="website" />
   <meta property="og:url"         content="https://clearcup.ch/" />
-  <meta property="og:title"       content="ClearCup — Protégez vos clients" />
-  <meta property="og:description" content="ClearCup est un sticker vinyle anti-soumission chimique pour bars, clubs et festivals. Simple, efficace, accessible." />
+  <meta property="og:title"       content="ClearCup — Protection verre anti-soumission chimique | Suisse" />
+  <meta property="og:description" content="Sticker vinyle anti-GHB pour bars, clubs et festivals en Suisse romande. Protégez vos clients en un geste." />
   <meta property="og:image"       content="https://clearcup.ch/ASSET_CC/og-image.webp" />
   <meta property="og:image:width"  content="1200" />
   <meta property="og:image:height" content="630" />
-  <meta property="og:image:alt"    content="Sticker ClearCup anti-soumission chimique posé sur un verre" />
+  <meta property="og:image:alt"    content="Sticker ClearCup anti-soumission chimique collé sur un verre de bar" />
   <meta property="og:locale"      content="fr_CH" />
+  <!-- SEO: og:site_name -->
+  <meta property="og:site_name"   content="ClearCup" />
 
   <!-- Twitter Card -->
   <meta name="twitter:card"        content="summary_large_image" />
   <meta name="twitter:site"        content="@clearcup_ch" />
-  <meta name="twitter:title"       content="ClearCup — Sticker anti-soumission chimique pour bars &amp; festivals" />
-  <meta name="twitter:description" content="ClearCup est un sticker vinyle anti-soumission chimique pour bars, clubs et festivals. Simple, efficace, accessible." />
+  <!-- SEO: Twitter card synchronisé avec og: -->
+  <meta name="twitter:title"       content="ClearCup — Sticker anti-soumission chimique pour bars &amp; festivals Suisse" />
+  <meta name="twitter:description" content="Sticker vinyle anti-GHB pour bars, clubs et festivals en Suisse romande. Protégez vos clients en un geste." />
   <meta name="twitter:image"       content="https://clearcup.ch/ASSET_CC/og-image.webp" />
   <!-- Hreflang -->
-  <link rel="alternate" hreflang="fr-CH" href="https://clearcup.ch/" />
+  <link rel="alternate" hreflang="fr" href="https://clearcup.ch/" />
+  <link rel="alternate" hreflang="de-CH" href="https://clearcup.ch/de/index.html" />
+  <link rel="alternate" hreflang="en" href="https://clearcup.ch/en/index.html" />
   <link rel="alternate" hreflang="x-default" href="https://clearcup.ch/" />
   <!-- Polices locales -->
-  <link rel="preload" as="font" type="font/woff2" href="TYPO/BagelFatOne-Regular.woff2" crossorigin />
-  <link rel="preload" as="font" type="font/woff2" href="TYPO/Arimo-VariableFont_wght.woff2" crossorigin />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="preload" as="font" type="font/woff2"
+        href="/TYPO/BagelFatOne-Regular.woff2"
+        crossorigin="anonymous"
+        fetchpriority="high" />
+  <link rel="preload" as="font" type="font/woff2"
+        href="/TYPO/Arimo-VariableFont_wght.woff2"
+        crossorigin="anonymous"
+        fetchpriority="high" />
+  <link rel="preload" as="style" href="css/tailwind.css" />
+  <link rel="preload" as="style" href="css/styles.css?v=6" />
   <link rel="stylesheet" href="css/tailwind.css" />
   <link rel="icon" href="ASSET_CC/favicon.ico" sizes="any" />
   <link rel="icon" type="image/png" sizes="32x32" href="ASSET_CC/favicon_32.png" />
   <link rel="icon" type="image/svg+xml" href="ASSET_CC/favicon.svg" />
   <link rel="apple-touch-icon" sizes="180x180" href="ASSET_CC/favicon-180.png" />
   <link rel="manifest" href="manifest.webmanifest" />
-  <meta name="theme-color" content="#FFFFFF" />
-  <meta name="color-scheme" content="light dark" />
+  <meta name="theme-color" content="#64A4F6" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="msapplication-config" content="/browserconfig.xml" />
+  <meta name="msapplication-TileColor" content="#64A4F6" />
   <meta name="format-detection" content="telephone=no" />
   <link rel="preload" as="image" href="ASSET_CC/hero-product.webp" />
-  <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/styles.css?v=6" />
+  <script src="js/lang-popup.js" defer></script>
 </head>
 <body>
-  <!-- Google Tag Manager (noscript) -->
-  <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-N34RZ3WS"
-  height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
-  <!-- End Google Tag Manager (noscript) -->
+  <!-- Pop-up sélection de langue -->
+  <div id="lang-overlay" class="lang-overlay" aria-hidden="true">
+    <div id="lang-popup" class="lang-popup" role="dialog"
+         aria-labelledby="lang-title" aria-modal="true">
+      <button id="lang-close" class="lang-close-btn" aria-label="Fermer">✕</button>
+      <p id="lang-title" class="lang-title">
+        Dans quelle langue souhaitez-vous naviguer sur ce site ?
+      </p>
+      <div class="lang-options">
+        <button class="lang-popup-btn" data-lang="fr">🇫🇷 Français</button>
+        <button class="lang-popup-btn" data-lang="de">🇩🇪 Deutsch</button>
+        <button class="lang-popup-btn" data-lang="en">🇺🇸 English</button>
+      </div>
+      <p class="lang-hint">
+        Vous pourrez changer de langue à tout moment via le menu en bas de page.
+      </p>
+    </div>
+  </div>
 
   <!-- NAVBAR -->
   <nav id="navbar" class="fixed top-0 left-0 right-0 z-50">
     <div class="nav-inner max-w-6xl mx-auto px-6 py-4">
       <a href="#hero" class="nav-logo flex items-center gap-2">
-        <img src="ASSET_CC/logo.svg" alt="ClearCup" class="h-8 w-auto"
+        <img src="ASSET_CC/logo.svg" alt="ClearCup" class="h-8 w-auto" fetchpriority="high"
              onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
         <span class="hidden">ClearCup</span>
       </a>
       <ul class="hidden md:flex items-center gap-6 nav-links">
         <li><a href="#probleme">Le problème</a></li>
-        <li><a href="#comment">Comment ça marche ?</a></li>
+        <li><a href="#produit">Le produit</a></li>
         <li><a href="#pour-qui">Pour qui ?</a></li>
         <li><a href="#pourquoi">Pourquoi ClearCup ?</a></li>
+        <li><a href="#faq">FAQ</a></li>
       </ul>
       <button id="burger-btn" class="md:hidden burger-btn" aria-label="Menu" aria-expanded="false">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
@@ -76,16 +113,17 @@
           <line class="burger-line burger-line-bot" x1="3" y1="18" x2="21" y2="18" />
         </svg>
       </button>
-      <a href="#contact" class="btn-primary nav-cta">Demander un devis</a>
+      <a href="#contact" class="btn-primary nav-cta" style="white-space:nowrap;">Demander un devis</a>
     </div>
     <!-- Mobile menu -->
     <div id="mobile-menu" class="mobile-menu hidden">
       <div class="mobile-menu-inner">
         <ul class="nav-links-mobile">
           <li><a href="#probleme">Le problème</a></li>
-          <li><a href="#comment">Comment ça marche ?</a></li>
+          <li><a href="#produit">Le produit</a></li>
           <li><a href="#pour-qui">Pour qui ?</a></li>
           <li><a href="#pourquoi">Pourquoi ClearCup ?</a></li>
+          <li><a href="#faq">FAQ</a></li>
           <li><a href="#contact">Contact</a></li>
         </ul>
       </div>
@@ -97,14 +135,18 @@
 
   <!-- HERO — pleine largeur -->
   <section id="hero" class="hero-section">
-    <img src="ASSET_CC/hero-product.webp" alt="Sticker ClearCup sur un verre" class="hero-img" width="1200" height="715" fetchpriority="high" decoding="async" loading="eager" />
+    <!-- SEO: alt descriptif avec mot-clé produit -->
+    <img src="ASSET_CC/hero-product.webp" alt="Sticker ClearCup anti-soumission chimique collé sur un verre de bar, avec perforation pour paille" class="hero-img" width="1200" height="715" fetchpriority="high" decoding="async" loading="eager" />
     <div class="hero-overlay">
       <div class="hero-left" data-reveal>
-        <h1>Protégez<br />vos clients.</h1>
+        <!-- SEO: h1 enrichi avec mot-clé principal -->
+        <h1>Protégez<br />vos clients<br />contre la<br />soumission chimique.</h1>
+        <!-- SEO uniquement — invisible visuellement, indexé par Google -->
+        <p style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;" aria-hidden="true">La solution de protection verre anti-GHB pour bars, clubs et festivals en Suisse romande.</p>
       </div>
       <div class="hero-center"></div>
       <div class="hero-right" data-reveal data-reveal-delay="1">
-        <p>ClearCup est un sticker vinyle qui couvre les verres dans vos établissements — une solution simple contre la soumission chimique en soirée.</p>
+        <p>ClearCup est un sticker vinyle de protection verre anti-soumission chimique — une solution simple contre le GHB et autres drogues du violeur, pensée pour les bars, clubs et festivals en Suisse romande.</p>
         <a href="#contact" class="btn-primary jello-horizontal">Demander un devis</a>
       </div>
     </div>
@@ -113,7 +155,7 @@
   <!-- PROBLÈME — fond bleu -->
   <section id="probleme" class="py-24 section-relative" style="background: var(--blue);">
     <div class="max-w-6xl mx-auto px-6 text-center">
-      <h2 class="mb-8 section-title" data-reveal>La soumission chimique,<br />un risque réel</h2>
+      <h2 class="mb-8 section-title" data-reveal>La soumission chimique en Suisse,<br />un risque réel</h2>
       <div class="grid md:grid-cols-2 gap-8 text-left mt-12">
         <div class="card text-center" data-reveal data-reveal-delay="1">
           <p class="stat-number mb-2" data-counter data-to="80" data-prefix="+" data-suffix="%">+80%</p>
@@ -132,26 +174,26 @@
   </section>
 
   <!-- COMMENT ÇA MARCHE — fond blanc -->
-  <section id="comment" class="py-24 section-relative" style="background: var(--white);">
+  <section id="produit" class="py-24 section-relative" style="background: var(--white);">
     <div class="max-w-5xl mx-auto px-6 text-center">
       <h2 class="mb-16" data-reveal>Comment ça marche ?</h2>
       <div class="grid md:grid-cols-3 gap-8">
         <div class="step-card" data-reveal data-reveal-delay="1">
-          <img src="ASSET_CC/step-coller.webp" alt="Prendre le sticker" class="step-img" width="432" height="592" loading="lazy"
+          <img src="ASSET_CC/step-coller.webp" alt="Poser le sticker ClearCup de protection verre" class="step-img" width="432" height="592" loading="lazy" decoding="async"
                onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>📌</div>'" />
           <p class="step-number">01</p>
           <h3>Prendre</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;" data-vf-reveal>Sortez le sticker ClearCup de son emballage.</p>
         </div>
         <div class="step-card" data-reveal data-reveal-delay="2">
-          <img src="ASSET_CC/step-proteger.webp" alt="Coller le sticker sur le verre" class="step-img" width="432" height="592" loading="lazy"
+          <img src="ASSET_CC/step-proteger.webp" alt="Coller le sticker anti-GHB ClearCup sur un verre" class="step-img" width="432" height="592" loading="lazy" decoding="async"
                onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>🥤</div>'" />
           <p class="step-number">02</p>
           <h3>Coller</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;" data-vf-reveal>Le sticker adhère sur n'importe quel verre en quelques secondes.</p>
         </div>
         <div class="step-card" data-reveal data-reveal-delay="3">
-          <img src="ASSET_CC/step-paille.webp" alt="Transpercer avec une paille et profiter" class="step-img" width="432" height="592" loading="lazy"
+          <img src="ASSET_CC/step-paille.webp" alt="Profiter avec protection verre anti-drogue ClearCup" class="step-img" width="432" height="592" loading="lazy" decoding="async"
                onerror="this.outerHTML='<div style=&quot;height:140px;display:flex;align-items:center;justify-content:center;font-size:3rem;&quot;>🛡️</div>'" />
           <p class="step-number">03</p>
           <h3>Profiter</h3>
@@ -165,16 +207,16 @@
   <section id="pour-qui" class="py-24 section-relative" style="background: var(--blue);">
     <div class="max-w-5xl mx-auto px-6">
       <div class="text-center mb-16">
-        <h2 data-reveal>Fait pour votre<br />établissement</h2>
+        <h2 data-reveal>Fait pour votre<br />établissement en Suisse romande</h2>
       </div>
       <div class="max-w-3xl mx-auto grid md:grid-cols-2 gap-6">
         <div class="card text-center" data-reveal data-reveal-delay="1">
           <h3 class="mb-2 card-title">Bars & clubs</h3>
-          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Offrez à vos clients une soirée en confiance. Différenciez-vous par votre engagement sécurité.</p>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Offrez à vos clients une soirée en confiance. Différenciez-vous par votre engagement sécurité contre la soumission chimique.</p>
         </div>
         <div class="card text-center" data-reveal data-reveal-delay="2">
           <h3 class="mb-2 card-title">Festivals & événements</h3>
-          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Distribuez ClearCup à l'entrée ou aux bars. Simple à déployer à grande échelle, sans logistique lourde.</p>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Distribuez ClearCup à l'entrée ou aux bars lors de vos festivals en Suisse. Simple à déployer à grande échelle, sans logistique lourde.</p>
         </div>
       </div>
     </div>
@@ -199,17 +241,17 @@
       </div>
       <div class="grid md:grid-cols-3 gap-8">
         <div class="card text-center" data-reveal data-reveal-delay="1">
-          <img src="ASSET_CC/responsabilite.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" />
+          <img src="ASSET_CC/responsabilite.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" decoding="async" />
           <h3 class="mb-2">Responsabilité</h3>
-          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Montrez à vos clients que leur sécurité est une priorité. Un geste fort, visible, apprécié.</p>
+          <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Montrez à vos clients que leur protection contre la soumission chimique est une priorité. Un geste fort, visible, apprécié en Suisse romande.</p>
         </div>
         <div class="card text-center" data-reveal data-reveal-delay="2">
-          <img src="ASSET_CC/simplicity.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" />
+          <img src="ASSET_CC/simplicity.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" decoding="async" />
           <h3 class="mb-2">Simplicité</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Aucune formation, aucune installation. On colle, c'est fait. Ça s'intègre à n'importe quel service.</p>
         </div>
         <div class="card text-center" data-reveal data-reveal-delay="3">
-          <img src="ASSET_CC/accesible.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" />
+          <img src="ASSET_CC/accesible.svg" alt="" class="card-icon" aria-hidden="true" loading="lazy" decoding="async" />
           <h3 class="mb-2">Accessibilité</h3>
           <p style="font-family: 'Arimo', sans-serif; font-size: 0.9rem;">Tarifs modulables selon les volumes. Adaptés aux petits bars comme aux grands festivals.</p>
         </div>
@@ -217,10 +259,57 @@
     </div>
   </section>
 
+  <!-- SEO: Section FAQ — améliore les rich snippets Google FAQPage -->
+  <section id="faq" class="py-24 section-relative" style="background: var(--white);">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-16">
+        <h2 data-reveal>Questions fréquentes</h2>
+      </div>
+      <div class="space-y-4">
+
+        <details class="faq-item" data-reveal data-reveal-delay="1">
+          <summary class="faq-question">Qu'est-ce que la soumission chimique ?</summary>
+          <div class="faq-answer">
+            <p style="font-family:'Arimo',sans-serif;">La soumission chimique consiste à ajouter à l'insu d'une personne une substance psychoactive dans sa boisson pour altérer son état de conscience. Le GHB est la molécule la plus fréquemment utilisée.</p>
+          </div>
+        </details>
+
+        <details class="faq-item" data-reveal data-reveal-delay="2">
+          <summary class="faq-question">Comment fonctionne le sticker ClearCup ?</summary>
+          <div class="faq-answer">
+            <p style="font-family:'Arimo',sans-serif;">Le sticker ClearCup est un autocollant en vinyle alimentaire qui se colle sur le dessus du verre. Il est prépercé pour laisser passer une paille, empêchant ainsi toute introduction de substance dans la boisson à l'insu du consommateur.</p>
+          </div>
+        </details>
+
+        <details class="faq-item" data-reveal data-reveal-delay="3">
+          <summary class="faq-question">ClearCup est-il adapté aux bars et clubs ?</summary>
+          <div class="faq-answer">
+            <p style="font-family:'Arimo',sans-serif;">Oui. ClearCup est une solution B2B conçue pour les établissements de nuit, bars, clubs, restaurants et organisateurs de festivals. Nous proposons des tarifs en volume et un accompagnement commercial.</p>
+          </div>
+        </details>
+
+        <details class="faq-item" data-reveal data-reveal-delay="4">
+          <summary class="faq-question">Le sticker est-il adapté aux festivals ?</summary>
+          <div class="faq-answer">
+            <p style="font-family:'Arimo',sans-serif;">Absolument. Le sticker ClearCup est léger, compact et facile à distribuer à grande échelle, ce qui en fait une solution idéale pour les festivals et grands événements.</p>
+          </div>
+        </details>
+
+        <details class="faq-item" data-reveal data-reveal-delay="5">
+          <summary class="faq-question">Comment commander des stickers ClearCup pour mon établissement ?</summary>
+          <div class="faq-answer">
+            <p style="font-family:'Arimo',sans-serif;">Contactez-nous via le formulaire ci-dessous pour obtenir un devis personnalisé selon votre volume et vos besoins. Nous proposons différents paliers tarifaires B2B.</p>
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </section>
+
   <!-- CONTACT — fond bleu -->
   <section id="contact" class="py-24 section-relative" style="background: var(--blue);">
     <div class="max-w-2xl mx-auto px-6 text-center">
-      <h2 class="mb-4" data-reveal>Devenir partenaire</h2>
+      <h2 class="mb-4" data-reveal>Devenir partenaire ClearCup en Suisse</h2>
       <p class="mb-12" style="font-family: 'Arimo', sans-serif;" data-word-reveal>Remplissez le formulaire, on vous répond sous 48h.</p>
 
       <form id="contact-form"
@@ -294,43 +383,87 @@
         </div>
       </form>
 
-      <div class="footer-bar mt-16 pt-8 flex flex-col md:flex-row items-center justify-between gap-4"
-           style="border-top: 2px solid rgba(0,0,0,0.2); font-family:'Arimo',sans-serif; font-size:0.875rem;">
-        <div class="footer-credits">
-          <p>© 2026 ClearCup</p>
-          <address style="font-style:normal;">Fribourg, Suisse — <a href="mailto:info@clearcup.ch" style="color:inherit;">info@clearcup.ch</a></address>
-          <button id="dark-egg" class="dark-toggle-btn" aria-label="Activer le mode nuit">
-            <svg id="dark-icon-moon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-            </svg>
-            <svg id="dark-icon-sun" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="hidden">
-              <circle cx="12" cy="12" r="5"/>
-              <line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/>
-              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-              <line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/>
-              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-            </svg>
-          </button>
+    </div>
+  </section>
+
+  <!-- FOOTER SECTION V1 -->
+  <section class="section-relative" style="background: var(--blue); padding-top: 0 !important;">
+    <div class="max-w-6xl mx-auto px-6">
+      <footer>
+
+        <!-- Footer Top : logo + tagline + CTA -->
+        <div class="footer-top">
+          <div class="footer-brand">
+            <a href="index.html" class="nav-logo flex items-center gap-2">
+              <img src="ASSET_CC/logo.svg" alt="ClearCup" class="h-12 w-auto" loading="lazy" decoding="async"
+                   onerror="this.style.display='none'; this.nextElementSibling.style.display='block'" />
+              <span class="hidden">ClearCup</span>
+            </a>
+            <p class="footer-tagline">Protection anti&#8209;soumission chimique<br />pour bars &amp; festivals en Suisse.</p>
+          </div>
+          <a href="index.html#contact" class="btn-white footer-cta">Demander un devis</a>
         </div>
-        <div class="flex items-center gap-4">
-          <button class="legal-link" data-modal="mentions">Mentions légales</button>
-          <button class="legal-link" data-modal="confidentialite">Confidentialité</button>
+
+        <!-- Footer Grid : Navigation / Ressources / Contact -->
+        <div class="footer-grid">
+          <div class="footer-col">
+            <p class="footer-col-title">Navigation</p>
+            <ul>
+              <li><a href="index.html#probleme">Le problème</a></li>
+              <li><a href="index.html#produit">Le produit</a></li>
+              <li><a href="index.html#pour-qui">Pour qui ?</a></li>
+              <li><a href="index.html#pourquoi">Pourquoi ClearCup ?</a></li>
+              <li><a href="index.html#faq">FAQ</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <p class="footer-col-title">Ressources</p>
+            <ul>
+              <li><a href="guide-soumission-chimique-suisse.html">Guide soumission chimique</a></li>
+              <li><a href="protection-verre-bar-festival.html">Protection verre bars &amp; festivals</a></li>
+              <li><a href="partenaires.html">Devenir partenaire</a></li>
+            </ul>
+          </div>
+          <div class="footer-col">
+            <p class="footer-col-title">Contact</p>
+            <ul>
+              <li><a href="mailto:info@clearcup.ch">info@clearcup.ch</a></li>
+              <li>Fribourg, Suisse</li>
+            </ul>
+          </div>
+          <div class="footer-col footer-col-lang">
+            <p class="footer-col-title">Langue</p>
+            <ul>
+              <li><span class="footer-lang-current">FR</span></li>
+              <li><a href="de/index.html">DE</a></li>
+              <li><a href="en/index.html">EN</a></li>
+            </ul>
+          </div>
         </div>
-        <a href="https://instagram.com/clearcup.ch" target="_blank" rel="noopener noreferrer me" class="insta-link" aria-label="Instagram @clearcup.ch">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
-            <circle cx="12" cy="12" r="4"/>
-            <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
-          </svg>
-        </a>
-      </div>
+
+        <!-- Footer Bottom : légal (gauche) | crédits (centre) | instagram (droite) -->
+        <div class="footer-bottom">
+          <div class="footer-legal">
+            <button class="legal-link" data-modal="mentions">Mentions légales</button>
+            <button class="legal-link" data-modal="confidentialite">Confidentialité</button>
+          </div>
+          <p class="footer-credits">© 2026 ClearCup</p>
+          <div class="footer-insta-col">
+            <a href="https://instagram.com/clearcup.ch" target="_blank" rel="noopener noreferrer me" class="insta-link" aria-label="Instagram @clearcup.ch">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+                <circle cx="12" cy="12" r="4"/>
+                <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+      </footer>
     </div>
   </section>
 
   </main>
-
-  <!-- Dark mode toast -->
-  <div id="dark-toast" class="dark-toast hidden"></div>
 
   <!-- Curseur personnalisé -->
   <div class="cursor-dot"></div>
@@ -338,53 +471,77 @@
 
   <!-- Cookie banner -->
   <div id="cookie-banner" class="cookie-banner hidden">
-    <p class="cookie-text">Ce site utilise Google Analytics pour mesurer l'audience. Des données anonymes sont transmises à Google si vous acceptez.</p>
-    <div class="cookie-actions">
-      <button id="cookie-refuse" class="cookie-btn-refuse">Refuser</button>
-      <button id="cookie-accept" class="cookie-btn-accept">Accepter</button>
+    <div class="cookie-main">
+      <p class="cookie-text">Nous utilisons des cookies pour améliorer votre expérience. Certains sont nécessaires au fonctionnement du site, d'autres nous aident à analyser le trafic via Google Analytics.</p>
+      <div class="cookie-actions">
+        <button id="cookie-essential" class="cookie-btn-refuse">Cookies essentiels uniquement</button>
+        <button id="cookie-accept-all" class="cookie-btn-accept">Tout accepter</button>
+      </div>
     </div>
+    <p class="cookie-subtext"><button class="legal-link" data-modal="confidentialite">Politique de confidentialité</button></p>
   </div>
 
   <!-- Sticky CTA mobile -->
 
-  <script src="js/main.js"></script>
+  <script src="js/main.js" defer></script>
 
-  <!-- Schema.org structured data -->
+  <!-- SEO: Schema.org structured data -->
+  <!-- SEO: Organization -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "Organization",
     "name": "ClearCup",
-    "url": "https://clearcup.ch/",
-    "logo": "https://clearcup.ch/ASSET_CC/logo.svg",
-    "email": "info@clearcup.ch",
-    "address": {
-      "@type": "PostalAddress",
-      "addressLocality": "Fribourg",
-      "addressCountry": "CH"
+    "url": "https://clearcup.ch",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://clearcup.ch/ASSET_CC/logo.svg",
+      "width": 200,
+      "height": 60
     },
+    "description": "ClearCup fabrique des stickers vinyle anti-soumission chimique pour bars, clubs et festivals en Suisse romande.",
+    "foundingLocation": {
+      "@type": "Place",
+      "name": "Fribourg, Suisse"
+    },
+    "areaServed": [
+      {
+        "@type": "Country",
+        "name": "Suisse"
+      }
+    ],
     "contactPoint": {
       "@type": "ContactPoint",
       "email": "info@clearcup.ch",
-      "contactType": "customer service",
-      "availableLanguage": "French"
+      "contactType": "sales",
+      "availableLanguage": ["French", "German", "English"]
     },
-    "sameAs": ["https://instagram.com/clearcup.ch"]
+    "sameAs": []
   }
   </script>
+  <!-- SEO: Product -->
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
     "@type": "Product",
-    "name": "ClearCup — Sticker anti-soumission chimique",
-    "description": "Sticker vinyle qui couvre les verres dans les bars, clubs et festivals pour prévenir la soumission chimique. Simple à utiliser : coller sur le verre, transpercer avec une paille.",
+    "name": "Sticker ClearCup anti-soumission chimique",
+    "description": "Sticker vinyle de protection verre anti-GHB. Se colle sur le verre, se perce à la paille. Conçu pour les bars, clubs et festivals en Suisse romande.",
     "brand": {
       "@type": "Brand",
       "name": "ClearCup"
     },
+    "url": "https://clearcup.ch",
+    "image": {
+      "@type": "ImageObject",
+      "url": "https://clearcup.ch/ASSET_CC/og-image.png"
+    },
     "audience": {
       "@type": "BusinessAudience",
-      "audienceType": "Bars, clubs, festivals, organisateurs d'événements"
+      "audienceType": "Bars, clubs, festivals, organisateurs d'événements en Suisse"
+    },
+    "areaServed": {
+      "@type": "Country",
+      "name": "Suisse"
     },
     "offers": {
       "@type": "Offer",
@@ -393,9 +550,69 @@
       "seller": {
         "@type": "Organization",
         "name": "ClearCup"
+      },
+      "description": "Tarification B2B sur devis selon le volume commandé. Contactez info@clearcup.ch."
+    }
+  }
+  </script>
+  <!-- SEO: WebSite + SearchAction -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "ClearCup",
+    "url": "https://clearcup.ch",
+    "description": "Solution de protection verre anti-soumission chimique pour bars, clubs et festivals en Suisse romande.",
+    "inLanguage": "fr-CH",
+    "potentialAction": {
+      "@type": "SearchAction",
+      "target": {
+        "@type": "EntryPoint",
+        "urlTemplate": "https://clearcup.ch/?q={search_term_string}"
+      },
+      "query-input": "required name=search_term_string"
+    }
+  }
+  </script>
+  <!-- SEO: FAQPage schema pour rich snippets Google -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {
+        "@type": "Question",
+        "name": "Comment fonctionne le sticker ClearCup ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Le sticker ClearCup se colle directement sur l'ouverture du verre. Il suffit ensuite de percer le sticker avec une paille pour consommer normalement. Le verre reste protégé contre l'introduction de substances."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "ClearCup protège-t-il contre le GHB et la soumission chimique ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Oui. ClearCup est conçu pour empêcher l'introduction discrète de substances dans un verre, notamment le GHB et autres produits utilisés dans les cas de soumission chimique."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Pour quels établissements ClearCup est-il disponible en Suisse ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "ClearCup s'adresse aux bars, clubs, boîtes de nuit et festivals en Suisse romande et en Suisse alémanique. La vente est exclusivement B2B. Contactez info@clearcup.ch pour un devis."
+        }
+      },
+      {
+        "@type": "Question",
+        "name": "Quel est le coût par verre protégé ?",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "Le coût dépend du volume commandé. ClearCup propose une grille tarifaire B2B dégressive selon les volumes. Contactez info@clearcup.ch pour un devis personnalisé."
+        }
       }
-    },
-    "image": "https://clearcup.ch/ASSET_CC/hero-product.webp"
+    ]
   }
   </script>
 </body>

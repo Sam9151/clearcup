@@ -1,12 +1,13 @@
 {
   "name": "ClearCup",
   "short_name": "ClearCup",
-  "description": "Sticker vinyle anti-soumission chimique pour bars, clubs et festivals.",
+  "description": "Protection verre anti-soumission chimique pour bars, clubs et festivals en Suisse romande. Sticker vinyle ClearCup.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#FFFFFF",
   "theme_color": "#64A4F6",
   "lang": "fr-CH",
+  "scope": "/",
   "icons": [
     {
       "src": "ASSET_CC/icon-192.png",
