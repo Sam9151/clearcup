@@ -499,39 +499,66 @@
   </script>
   <!-- Product -->
   <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "name": "ClearCup Anti-Drink Spiking Vinyl Sticker",
-    "description": "Vinyl sticker drink protection against GHB and spiking substances. Sticks on top of the glass, pierced with a straw to drink normally. Designed for bars, clubs and festivals across Switzerland.",
-    "brand": {
-      "@type": "Brand",
-      "name": "ClearCup"
-    },
-    "url": "https://clearcup.ch/en/",
-    "image": {
-      "@type": "ImageObject",
-      "url": "https://clearcup.ch/ASSET_CC/og-image.png"
-    },
-    "audience": {
-      "@type": "BusinessAudience",
-      "audienceType": "Bars, clubs, festivals and event organizers in Switzerland"
-    },
-    "areaServed": {
-      "@type": "Country",
-      "name": "Switzerland"
-    },
-    "offers": {
-      "@type": "Offer",
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "ClearCup — Anti-Drink Spiking Vinyl Sticker",
+  "description": "Vinyl sticker drink protection against GHB and spiking substances. Sticks on top of the glass, pierced with a straw to drink normally. Designed for bars, clubs and festivals across Switzerland.",
+  "brand": {
+    "@type": "Brand",
+    "name": "ClearCup"
+  },
+  "image": "https://clearcup.ch/ASSET_CC/hero-product.webp",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "CHF",
+    "price": "0",
+    "priceSpecification": {
+      "@type": "PriceSpecification",
       "priceCurrency": "CHF",
-      "availability": "https://schema.org/InStock",
-      "seller": {
-        "@type": "Organization",
-        "name": "ClearCup"
-      },
       "description": "B2B pricing on request based on order volume. Contact info@clearcup.ch."
+    },
+    "availability": "https://schema.org/InStock",
+    "seller": {
+      "@type": "Organization",
+      "name": "ClearCup",
+      "url": "https://clearcup.ch"
+    },
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "CH"
+      },
+      "deliveryTime": {
+        "@type": "ShippingDeliveryTime",
+        "businessDays": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"]
+        },
+        "cutoffTime": "17:00",
+        "handlingTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 1,
+          "maxValue": 3,
+          "unitCode": "DAY"
+        },
+        "transitTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 2,
+          "maxValue": 5,
+          "unitCode": "DAY"
+        }
+      }
+    },
+    "hasMerchantReturnPolicy": {
+      "@type": "MerchantReturnPolicy",
+      "applicableCountry": "CH",
+      "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted",
+      "merchantReturnDays": 0
     }
   }
+}
   </script>
   <!-- FAQPage -->
   <script type="application/ld+json">
