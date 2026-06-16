@@ -521,39 +521,66 @@
   </script>
   <!-- SEO: Product -->
   <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    "name": "Sticker ClearCup anti-soumission chimique",
-    "description": "Sticker vinyle de protection verre anti-GHB. Se colle sur le verre, se perce à la paille. Conçu pour les bars, clubs et festivals en Suisse romande.",
-    "brand": {
-      "@type": "Brand",
-      "name": "ClearCup"
-    },
-    "url": "https://clearcup.ch",
-    "image": {
-      "@type": "ImageObject",
-      "url": "https://clearcup.ch/ASSET_CC/og-image.png"
-    },
-    "audience": {
-      "@type": "BusinessAudience",
-      "audienceType": "Bars, clubs, festivals, organisateurs d'événements en Suisse"
-    },
-    "areaServed": {
-      "@type": "Country",
-      "name": "Suisse"
-    },
-    "offers": {
-      "@type": "Offer",
+{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "ClearCup — Sticker anti-soumission chimique",
+  "description": "Sticker vinyle qui couvre les verres dans les bars, clubs et festivals pour prévenir la soumission chimique. Simple à utiliser : coller sur le verre, transpercer avec une paille.",
+  "brand": {
+    "@type": "Brand",
+    "name": "ClearCup"
+  },
+  "image": "https://clearcup.ch/ASSET_CC/hero-product.webp",
+  "offers": {
+    "@type": "Offer",
+    "priceCurrency": "CHF",
+    "price": "0",
+    "priceSpecification": {
+      "@type": "PriceSpecification",
       "priceCurrency": "CHF",
-      "availability": "https://schema.org/InStock",
-      "seller": {
-        "@type": "Organization",
-        "name": "ClearCup"
-      },
       "description": "Tarification B2B sur devis selon le volume commandé. Contactez info@clearcup.ch."
+    },
+    "availability": "https://schema.org/InStock",
+    "seller": {
+      "@type": "Organization",
+      "name": "ClearCup",
+      "url": "https://clearcup.ch"
+    },
+    "shippingDetails": {
+      "@type": "OfferShippingDetails",
+      "shippingDestination": {
+        "@type": "DefinedRegion",
+        "addressCountry": "CH"
+      },
+      "deliveryTime": {
+        "@type": "ShippingDeliveryTime",
+        "businessDays": {
+          "@type": "OpeningHoursSpecification",
+          "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"]
+        },
+        "cutoffTime": "17:00",
+        "handlingTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 1,
+          "maxValue": 3,
+          "unitCode": "DAY"
+        },
+        "transitTime": {
+          "@type": "QuantitativeValue",
+          "minValue": 2,
+          "maxValue": 5,
+          "unitCode": "DAY"
+        }
+      }
+    },
+    "hasMerchantReturnPolicy": {
+      "@type": "MerchantReturnPolicy",
+      "applicableCountry": "CH",
+      "returnPolicyCategory": "https://schema.org/MerchantReturnNotPermitted",
+      "merchantReturnDays": 0
     }
   }
+}
   </script>
   <!-- SEO: WebSite + SearchAction -->
   <script type="application/ld+json">
