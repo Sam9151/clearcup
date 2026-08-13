@@ -1,0 +1,17 @@
+{
+  "updated": "2026-08-10",
+  "sampleSize": 0,
+  "mean_ms": 19000,
+  "median_ms": 17500,
+  "buckets_ms": [
+    { "max_ms": 5000,  "count": 5 },
+    { "max_ms": 10000, "count": 12 },
+    { "max_ms": 15000, "count": 20 },
+    { "max_ms": 20000, "count": 25 },
+    { "max_ms": 25000, "count": 18 },
+    { "max_ms": 30000, "count": 10 },
+    { "max_ms": 35000, "count": 6 },
+    { "max_ms": 40000, "count": 3 },
+    { "max_ms": 45000, "count": 1 }
+  ]
+}

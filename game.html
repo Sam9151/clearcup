@@ -1,0 +1,2134 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<meta name="description" content="Combien de temps tu tiens à surveiller ton verre ? Un jeu ClearCup.">
+<title>Lâche pas — ClearCup</title>
+
+<!--
+  ============================================================================
+  LÂCHE PAS — Jalon 1 (mécanique nue)
+  ============================================================================
+  Fichier unique, tout inclus (CSS + JS), pas de build step, pas de dépendance.
+  Voir ASSETS_A_FOURNIR.md pour le détail des assets et des décisions prises.
+
+  Contenu du Jalon 1 :
+  - Hold du verre à un seul doigt (règle : un 2e pointeur = game over immédiat)
+  - Jauge de risque (se remplit quand le doigt quitte le verre, se vide 2x plus vite)
+  - 4 distractions : 2 type A (action obligatoire), 1 type B (leurre), 1 type C (verre qui bouge)
+  - Courbe de difficulté par phases (confiance / montée / chaos / impossible / cap 45s)
+  - Écran de révélation complet en 4 temps
+  - Écran d'avertissement stroboscope au 1er lancement, prefers-reduced-motion respecté
+  - Verrouillage paysage, invalidation si l'app passe en arrière-plan
+
+  Hors scope Jalon 1 (voir brief, à ajouter au Jalon 2) :
+  Firebase, file d'attente hors-ligne, carte de score canvas, capture du @,
+  GTM, service worker / PWA, catalogue complet des distractions.
+  ============================================================================
+-->
+
+<style>
+  /* ==========================================================================
+     VARIABLES — palette officielle ClearCup (css/styles.css du site principal)
+     ========================================================================== */
+  :root{
+    --white:#FFFFFF;
+    --ink:#0A0A0A;
+    --blue:#64A4F6;
+    --alerte:#EF4444;
+    --alerte-rgb:239,68,68;
+    /* Couleur de #flood, pilotée en JS (loop()) pour suivre les mêmes seuils
+       que la barre de vie — vert/orange/rouge. Canaux séparés (et non un seul
+       --flood-rgb combiné) car @property ne sait déclarer qu'un type simple
+       par propriété ; un <number> par canal permet au navigateur d'interpoler
+       chaque composante en fondu (voir @property plus bas), exactement comme
+       le fait nativement .vie-bar-fill sur son background-color. */
+    --flood-r:34; --flood-g:197; --flood-b:94; /* vert initial, = #22C55E de .vie-bar-fill */
+    --font-title:'Bagel Fat One', system-ui, -apple-system, sans-serif;
+    --font-body:'Arimo', system-ui, -apple-system, sans-serif;
+    --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+    --ease-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+    --risk:0;
+    --border: 2px solid var(--ink);
+    --radius-card: 1.5rem;
+    --radius-btn: 9999px;
+    --shadow-dark: 4px 4px 0 var(--ink);
+    --shadow-dark-sm: 2px 2px 0 var(--ink);
+    /* --flood-r/g/b déclarés animables (voir @property ci-dessous) : cette
+       transition sur :root est ce qui rend le changement de teinte du flood
+       fluide, au lieu d'un saut net à chaque franchissement de seuil. */
+    transition: --flood-r 550ms ease, --flood-g 550ms ease, --flood-b 550ms ease;
+  }
+  /* Enregistrement requis pour qu'un <number> personnalisé soit interpolable
+     par le moteur CSS (sinon transition/animation sur un custom property reste
+     un saut net). Supporté depuis Safari 16.4 / iOS 16.4 (2023) — l'appareil
+     de référence du projet en bénéficie ; sur un navigateur plus ancien, le
+     flood change simplement de couleur sans fondu (dégradation silencieuse,
+     aucune erreur). */
+  @property --flood-r{ syntax:'<number>'; inherits:true; initial-value:34; }
+  @property --flood-g{ syntax:'<number>'; inherits:true; initial-value:197; }
+  @property --flood-b{ syntax:'<number>'; inherits:true; initial-value:94; }
+
+  /* Polices auto-hébergées, sous-coupées pour le jeu (voir ASSETS_A_FOURNIR.md) */
+  @font-face{
+    font-family:'Bagel Fat One';
+    src:url('TYPO/lp-bagel-fat-one.woff2') format('woff2');
+    font-weight:400;
+    font-style:normal;
+    font-display:swap; /* était block : le chrono (#timer) l'utilise, un réseau lent (bar/festival) le laissait invisible pendant le chargement au lieu d'afficher un fallback */
+  }
+  @font-face{
+    font-family:'Arimo';
+    src:url('TYPO/lp-arimo.woff2') format('woff2');
+    font-weight:100 900;
+    font-style:normal;
+    font-display:swap;
+  }
+
+  /* ==========================================================================
+     RESET — pièges mobiles (§13.2 du brief). Sans -webkit-touch-callout:none,
+     le long press déclenche le menu de sélection iOS et le jeu est mort.
+     ========================================================================== */
+  *, *::before, *::after{
+    box-sizing:border-box;
+    touch-action:none;
+    -webkit-user-select:none;
+    user-select:none;
+    -webkit-touch-callout:none;
+    -webkit-tap-highlight-color:transparent;
+  }
+  html, body{
+    margin:0;
+    height:100%;
+    overscroll-behavior:none;
+    background:var(--white);
+    color:var(--ink);
+    font-family:var(--font-body);
+  }
+  body{
+    position:fixed;
+    inset:0;
+    overflow:hidden;
+    -webkit-font-smoothing:antialiased;
+  }
+  button{
+    font:inherit;
+    color:inherit;
+    background:none;
+    border:0;
+    padding:0;
+    margin:0;
+  }
+
+  /* ==========================================================================
+     STRUCTURE GÉNÉRALE
+     ========================================================================== */
+  #app{ position:relative; width:100%; height:100%; }
+  /* Fondu entre écrans : chaque écran reste dans le rendu (jamais display:none,
+     display:none ne peut pas être transitionné) mais à opacité 0 et
+     pointer-events:none tant qu'il n'est pas actif. showScreen() bascule la
+     classe .is-active — les deux écrans (sortant/entrant) se croisent en
+     fondu automatiquement puisqu'ils sont tous en position:absolute; inset:0. */
+  .screen{
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:var(--white);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 220ms ease;
+  }
+  .screen.is-active{
+    opacity:1;
+    pointer-events:auto;
+  }
+  body.reduced-fx .screen{ transition:none; }
+
+  /* Verrouillage paysage — CSS pur, ne dépend d'aucun JS pour s'afficher */
+  #screen-rotate{
+    display:none;
+    position:fixed; inset:0; z-index:9999;
+    background:var(--white);
+    align-items:center; justify-content:center;
+    text-align:center; padding:2rem;
+  }
+  @media (orientation:landscape) and (max-height:600px){
+    #screen-rotate{ display:flex; }
+  }
+  #screen-rotate p{
+    font-family:var(--font-title);
+    font-size:clamp(1.5rem,6vw,2.5rem);
+    max-width:20ch;
+  }
+
+  /* ==========================================================================
+     NÉO-BRUTALISME — réservé à l'accueil (branding) et à la révélation.
+     Repris tel quel de la charte du site (css/styles.css : --shadow-dark,
+     --radius-card, pilule de bouton) : bord noir 2px, coins arrondis, ombre
+     dure sans flou. Jamais pendant le jeu lui-même (§4 du brief).
+     ========================================================================== */
+  .nb-card{
+    background:var(--white);
+    border:var(--border);
+    border-radius:var(--radius-card);
+    box-shadow:var(--shadow-dark);
+  }
+  .nb-btn{
+    display:inline-block;
+    font-family:var(--font-title);
+    font-size:1.4rem;
+    text-transform:uppercase;
+    color:var(--white);
+    background:var(--blue);
+    border:var(--border);
+    border-radius:var(--radius-btn);
+    padding:.9rem 2.25rem;
+    box-shadow:var(--shadow-dark);
+    transition:transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
+  }
+  .nb-btn:active{ transform:translate(3px,3px); box-shadow:var(--shadow-dark-sm); }
+
+  /* ==========================================================================
+     FENÊTRE — CLASSEMENT (et autres modales à venir, ex. Règles)
+     ========================================================================== */
+  .modal-overlay{
+    position:fixed; inset:0;
+    z-index:1000;
+    background:rgba(10,10,10,.55);
+    display:flex; align-items:center; justify-content:center;
+    padding:1.5rem;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity 200ms ease;
+  }
+  .modal-overlay.is-open{ opacity:1; pointer-events:auto; }
+  .modal-overlay[hidden]{ display:none; } /* posé après le fondu de fermeture (voir closeClassement/closeRegles), retire complètement de l'arbre interactif */
+  body.reduced-fx .modal-overlay{ transition:none; }
+  .modal-card{
+    position:relative;
+    width:100%;
+    max-width:340px;
+    max-height:80vh;
+    overflow-y:auto;
+    touch-action:pan-y; /* réactive le scroll tactile vertical, désactivé globalement par *{touch-action:none} */
+    padding:1.75rem 1.25rem 1.5rem;
+    transform:translateY(14px) scale(.96);
+    opacity:0;
+    transition:transform 220ms var(--ease-bounce), opacity 200ms ease;
+  }
+  .modal-overlay.is-open .modal-card{ transform:translateY(0) scale(1); opacity:1; }
+  body.reduced-fx .modal-card{ transition:none; }
+  .modal-close{
+    position:absolute; top:.65rem; right:.65rem;
+    width:2rem; height:2rem;
+    display:flex; align-items:center; justify-content:center;
+    border:var(--border);
+    border-radius:50%;
+    background:var(--white);
+    font-size:1rem; line-height:1;
+  }
+  .modal-title{
+    font-family:var(--font-title);
+    font-size:1.5rem;
+    text-transform:uppercase;
+    text-align:center;
+    margin:0 0 1.25rem;
+  }
+  .classement-list{
+    list-style:none;
+    margin:0; padding:0;
+    display:flex; flex-direction:column;
+    gap:.4rem;
+  }
+  .classement-list li{
+    display:flex; align-items:center; gap:.65rem;
+    padding:.55rem .7rem;
+    border-radius:.75rem;
+    background:rgba(10,10,10,.04);
+  }
+  .classement-list li:first-child{
+    background:rgba(100,164,246,.14);
+    border:1.5px solid var(--blue);
+  }
+  .classement-rank{
+    flex-shrink:0;
+    width:1.6rem;
+    font-family:var(--font-title);
+    font-size:1rem;
+    text-align:center;
+    color:var(--blue);
+  }
+  .classement-name{
+    flex:1;
+    min-width:0;
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:.95rem;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .classement-time{
+    flex-shrink:0;
+    font-family:var(--font-title);
+    font-size:.9rem;
+  }
+
+  .regles-list{
+    display:flex;
+    flex-direction:column;
+    gap:.85rem;
+  }
+  .regles-item{
+    display:flex;
+    align-items:flex-start;
+    gap:.65rem;
+  }
+  .regles-num{
+    flex-shrink:0;
+    width:1.6rem; height:1.6rem;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    background:var(--blue);
+    border:1.5px solid var(--ink);
+    color:var(--white);
+    font-family:var(--font-title);
+    font-size:.85rem;
+  }
+  .regles-item p{
+    margin:.15rem 0 0;
+    font-family:var(--font-body);
+    font-size:.92rem;
+    line-height:1.35;
+  }
+
+  /* ==========================================================================
+     ÉCRAN 0 — AVERTISSEMENT STROBOSCOPE (1er lancement uniquement)
+     ========================================================================== */
+  #screen-strobe{ padding:2rem; text-align:center; z-index:20; }
+  #screen-strobe h1{
+    font-family:var(--font-title);
+    font-size:clamp(1.5rem,7vw,2.25rem);
+    margin:0 0 1rem;
+  }
+  #screen-strobe p{
+    font-family:var(--font-body);
+    font-size:1rem;
+    line-height:1.5;
+    max-width:32ch;
+    margin:0 auto 2.5rem;
+  }
+  .strobe-actions{ display:flex; flex-direction:column; gap:1.25rem; }
+  .strobe-actions button{
+    font-family:var(--font-title);
+    font-size:1.25rem;
+    text-transform:uppercase;
+  }
+  #btn-strobe-reduced{ text-decoration:underline; }
+
+  /* ==========================================================================
+     ÉCRAN 1 — ACCUEIL. Le joueur comprend par la forme (empreinte statique
+     au centre du verre) ; la marque reste visible et reconnaissable (logo,
+     Bagel Fat One, bleu ClearCup) comme sur clearcup.ch — aucune instruction
+     écrite, seulement le nom du jeu.
+     ========================================================================== */
+  .accueil-brand{
+    display:flex; justify-content:center;
+    width:100%;
+    box-sizing:border-box;
+    padding:0 1.5cm; /* marge plancher de 1,5cm de chaque côté (voir demande) */
+    margin:0 0 1rem;
+    transform:translateY(calc(-.5rem + 2cm)); /* descendu de 2cm par rapport à la position précédente, sans bouger le reste de la mise en page */
+  }
+  /* Petite entrée en fondu du logo/titre/accroche à l'arrivée sur l'accueil
+     (plutôt qu'un cut brut après le stroboscope). .entree est ajoutée par
+     goToAccueil() avec un reflow forcé pour pouvoir rejouer l'animation à
+     chaque retour à l'accueil (rare : 1er lancement, ou après interruption). */
+  .accueil-brand.entree{ animation:accueil-brand-in 480ms var(--ease-out) both; }
+  @keyframes accueil-brand-in{
+    from{ opacity:0; transform:translateY(calc(-.5rem + 2cm - 10px)); }
+    to{ opacity:1; transform:translateY(calc(-.5rem + 2cm)); }
+  }
+  .accueil-title.entree{ animation:fade-up 480ms 80ms var(--ease-out) both; }
+  .accueil-hint.entree{ animation:fade-up 480ms 140ms var(--ease-out) both; }
+  body.reduced-fx .accueil-brand.entree,
+  body.reduced-fx .accueil-title.entree,
+  body.reduced-fx .accueil-hint.entree{ animation:none; }
+  /* LOGO_SEC.svg est un lockup vertical (mascotte + texte empilés,
+     ~1,3x plus haut que large) contrairement à l'ancien wordmark horizontal.
+     À la même règle de largeur que précédemment (1,5cm de marge → ~277px sur
+     iPhone 14), le logo ferait ~360px de haut à lui seul et ferait déborder
+     l'écran une fois cumulé avec le verre, le titre et les 3 boutons.
+     max-width le recadre à une taille de bloc de marque raisonnable ; le
+     padding 1,5cm reste un plancher de marge, plus la contrainte active. */
+  .accueil-brand svg{ width:100%; max-width:152px; height:auto; display:block; }
+  /* Fond dégradé d'origine : dégradé blanc → bleu ClearCup qui ondule en
+     boucle. Classe générique (pas scopée à #screen-accueil) au cas où elle
+     resservirait ailleurs — plus utilisée que par l'accueil pour l'instant
+     (temps 2/3/4 de la révélation utilisent .rv-temps--blue, un fond bleu plat). */
+  .animated-gradient{
+    position:absolute; inset:0;
+    background:linear-gradient(257deg, var(--white) 0%, var(--blue) 100%);
+    background-size:150% 150%;
+    animation:gradient-wave 8s ease alternate infinite;
+    animation-delay:2.5s;
+    overflow:hidden;
+  }
+  @keyframes gradient-wave{
+    0%,100%{ background-position:0% 50%; }
+    25%{ background-position:100% 50%; }
+    50%{ background-position:100% 100%; }
+    75%{ background-position:0% 100%; }
+  }
+  body.reduced-fx .animated-gradient{ animation:none; background-position:50% 50%; }
+  #accueil-verre-zone{
+    position:relative;
+    width:100%;
+    min-height:150px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .accueil-title{
+    font-family:var(--font-title);
+    font-size:clamp(2.85rem,13.5vw,4.5rem);
+    line-height:.95;
+    margin:.5rem 0 0;
+    text-align:center;
+  }
+  .accueil-hint{
+    font-family:var(--font-body);
+    font-size:.95rem;
+    color:rgba(10,10,10,.55);
+    margin:.5rem 0 2rem;
+    text-align:center;
+  }
+  .accueil-menu{
+    display:flex;
+    flex-direction:column;
+    align-items:stretch;
+    gap:.75rem;
+    width:100%;
+    max-width:280px;
+    padding:0 2rem;
+  }
+  .accueil-menu .nb-btn{
+    width:100%;
+    text-align:center;
+    letter-spacing:.02em;
+  }
+  /* Pulsation très lente et discrète du CTA principal, pour attirer l'œil
+     sans être criarde. box-shadow plutôt que transform/scale : .nb-btn:active
+     pilote déjà transform pour le retour de pression, les deux entreraient en
+     conflit (une animation gagne toujours sur une règle d'état normale en CSS)
+     — animation:none au clic laisse .nb-btn:active s'exprimer normalement. */
+  #btn-commencer{ animation:cta-breathe 2600ms ease-in-out infinite; }
+  #btn-commencer:active{ animation:none; }
+  @keyframes cta-breathe{
+    0%,100%{ box-shadow:var(--shadow-dark); }
+    50%{ box-shadow:6px 6px 0 var(--ink); }
+  }
+  body.reduced-fx #btn-commencer{ animation:none; }
+  .nb-btn--white{
+    color:var(--ink);
+    background:var(--white);
+  }
+
+  /* ==========================================================================
+     LE VERRE — deux enveloppes : verre-anim (bousculade, translate) et
+     verre-scale (pression du doigt, scale). Élément unique déplacé en JS
+     entre l'écran accueil et l'écran jeu (évite de dupliquer les id du SVG).
+     ========================================================================== */
+  #verre-anim{ position:relative; }
+  #verre-scale{
+    width:min(56vw, 260px);
+    transition:transform 110ms var(--ease-out);
+  }
+  #verre-scale.is-held{ transform:scale(.96); }
+  #verre-scale svg{ width:100%; height:auto; display:block; overflow:visible; }
+
+  #verre-scale.is-danger #Couvercle{
+    transform:translate(2px,-5px) rotate(-7deg);
+    transform-origin:30% 100%;
+  }
+  #verre-scale #Couvercle{ transition:transform 140ms var(--ease-out); transform-origin:30% 100%; }
+  #verre-scale.is-danger #Yeux{ transform:scale(1.12); }
+  #verre-scale #Yeux{ transition:transform 140ms var(--ease-out); transform-origin:50% 45%; }
+  #verre-scale #Pupilles{ transition:transform 180ms var(--ease-out); }
+
+  @keyframes bousculade{
+    0%{ transform:translate(0,0) rotate(0); }
+    32%{ transform:translate(var(--vx),var(--vy)) rotate(var(--vr)); }
+    58%{ transform:translate(calc(var(--vx) * -0.35),calc(var(--vy) * -0.35)) rotate(calc(var(--vr) * -0.4)); }
+    100%{ transform:translate(0,0) rotate(0); }
+  }
+  #verre-anim.is-bousculade{ animation:bousculade 820ms var(--ease-bounce) both; }
+  body.reduced-fx #verre-anim.is-bousculade{ animation-duration:320ms; }
+
+  /* ==========================================================================
+     ÉCRAN 2 — JEU
+     ========================================================================== */
+  #jeu-hud{
+    position:absolute;
+    top:max(1.25rem, env(safe-area-inset-top));
+    left:0; right:0;
+    display:flex; flex-direction:column; align-items:center;
+    gap:.6rem;
+    padding:0 1.5rem;
+    pointer-events:none;
+    z-index:3;
+    opacity:0;
+    transform:translateY(-10px);
+  }
+  /* Le doigt est déjà sur le verre en arrivant sur l'écran jeu (posé depuis
+     l'écran d'attente) : le verre reste stable, seul le HUD glisse/fondu
+     depuis le haut pour donner le sentiment que le chrome "s'installe"
+     plutôt que de tout faire apparaître d'un coup. Classe retirée/reflow/
+     rajoutée à chaque startGame() pour rejouer l'animation à chaque partie
+     (même technique que .is-bousculade plus haut). */
+  #jeu-hud.hud-enter{
+    animation:hud-enter 380ms 80ms var(--ease-out) both;
+  }
+  @keyframes hud-enter{ from{ opacity:0; transform:translateY(-10px); } to{ opacity:1; transform:translateY(0); } }
+  body.reduced-fx #jeu-hud{ opacity:1; transform:none; }
+  body.reduced-fx #jeu-hud.hud-enter{ animation:none; }
+  /* Barre de vie : demandée explicitement en plus de l'inondation ambiante
+     ci-dessous (qui reste, cf. #flood) — verte, puis orange dès le 1er tiers
+     de vie perdu, puis rouge sur le dernier tiers. Transition de couleur en
+     fondu (background-color), largeur mise à jour à chaque frame dans loop(). */
+  .vie-bar-track{
+    width:100%; max-width:280px;
+    height:10px;
+    border-radius:999px;
+    background:rgba(10,10,10,.08);
+    overflow:hidden;
+  }
+  .vie-bar-fill{
+    height:100%;
+    border-radius:999px;
+    background:#22C55E;
+    transition:width 80ms linear, background-color 550ms ease;
+  }
+  .vie-bar-fill.is-mid{ background:#F59E0B; }
+  .vie-bar-fill.is-low{ background:var(--alerte); }
+  /* Flash synchronisé à une bousculade (voir triggerBousculade()) — filter,
+     pas transform/background, pour ne pas interférer avec la transition de
+     width/background-color déjà en cours sur cet élément. */
+  .vie-bar-fill.is-flash{ animation:vie-flash 380ms ease-out; }
+  body.reduced-fx .vie-bar-fill.is-flash{ animation:none; }
+  @keyframes vie-flash{ 0%{ filter:brightness(1.8); } 100%{ filter:brightness(1); } }
+  #timer{
+    text-align:center;
+    font-family:var(--font-title);
+    font-size:clamp(2.25rem,10vw,4rem);
+    line-height:1;
+    font-variant-numeric:tabular-nums; /* les chiffres ne "dansent" plus horizontalement à chaque dixième de seconde */
+  }
+  #jeu-verre-zone{ flex:1; width:100%; display:flex; align-items:center; justify-content:center; }
+  /* Pas de flex:1 ici, contrairement à #jeu-verre-zone : sur l'écran d'attente
+     il n'y a pas de HUD fixe en haut à compenser, donc le groupe texte+verre
+     doit rester un bloc que le justify-content:center de .screen centre
+     entièrement, plutôt que de le pousser vers le haut en remplissant l'espace. */
+  #pret-verre-zone{ width:100%; display:flex; align-items:center; justify-content:center; }
+  /* ==========================================================================
+     ÉCRAN 1.5 — ATTENTE (entre l'accueil et le jeu). Pas de branding ici
+     (le jeu lui-même reste « Stollenmayer pur », cf. §4 du brief) : juste
+     l'instruction et le verre, déjà à sa position finale, pour que le doigt
+     posé dessus enchaîne directement sur startGame() sans sursaut.
+     ========================================================================== */
+  .pret-instruction{
+    font-family:var(--font-title);
+    font-size:clamp(1.4rem,6vw,2rem);
+    text-transform:uppercase;
+    text-align:center;
+    line-height:1.15;
+    max-width:24ch;
+    margin:0 0 1.5rem;
+    padding:0 1.5rem;
+  }
+
+  /* Jauge de risque : inondation ambiante depuis les bords, jamais une barre */
+  /* Couleur synchronisée sur les mêmes seuils que la barre de vie (vert, puis
+     orange, puis rouge — voir --flood-r/g/b mis à jour dans loop()). Le
+     fondu entre teintes vient de la transition sur --flood-r/g/b déclarée
+     sur :root (cf. @property plus haut) : un gradient ne peut pas être
+     transitionné directement, mais ses canaux de couleur, eux, le peuvent. */
+  #flood{
+    position:fixed; inset:0; z-index:2; pointer-events:none;
+    background:radial-gradient(circle at 50% 55%,
+      transparent 0%,
+      transparent calc((1 - var(--risk)) * 62%),
+      rgba(var(--flood-r), var(--flood-g), var(--flood-b), .88) 100%);
+  }
+
+  /* Distractions type A/B : cartes en zone du pouce, sans chrome */
+  #card-zone{
+    position:absolute; left:0; right:0; bottom:max(6vh, env(safe-area-inset-bottom));
+    display:flex; justify-content:center; z-index:4;
+    pointer-events:none;
+  }
+  .lp-card{
+    pointer-events:auto;
+    max-width:78vw;
+    text-align:center;
+    padding:.5rem 1rem;
+    animation:card-in 220ms var(--ease-bounce) both;
+  }
+  .lp-card.is-urgent{ animation:card-urgent 260ms ease-in-out infinite; }
+  body.reduced-fx .lp-card.is-urgent{ animation:none; }
+  @keyframes card-in{ from{ transform:translateY(16px) scale(.9); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
+  @keyframes card-urgent{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.045); } }
+  .lp-card__texte{
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:1.05rem;
+    color:var(--ink);
+    margin:0 0 .35rem;
+  }
+  .lp-card__label{
+    display:inline-block;
+    font-family:var(--font-title);
+    font-size:1.6rem;
+    text-transform:uppercase;
+    color:var(--ink);
+  }
+  /* Flash « raté » : couleur simple (pas d'animation) pour ne pas entrer en
+     conflit avec le pulse de .is-urgent (déjà actif juste avant, cf. loop()),
+     qui continue de tourner sans interférence puisqu'on ne touche pas transform. */
+  .lp-card.is-missed .lp-card__texte,
+  .lp-card.is-missed .lp-card__label{ color:var(--alerte); }
+
+  /* « pote_appelle » : seule distraction à casser volontairement la règle
+     « sans chrome » ci-dessus — elle imite un vrai écran d'appel entrant
+     iPhone (notification qui tombe du haut, fond flouté, bouton vert) pour
+     être reconnaissable instantanément, sans lecture. position:fixed pour
+     ignorer le positionnement en bas de #card-zone et s'ancrer en haut. */
+  .lp-call{
+    position:fixed;
+    top:max(.75rem, env(safe-area-inset-top));
+    left:.75rem; right:.75rem;
+    max-width:420px;
+    margin:0 auto;
+    display:flex; align-items:center; gap:.75rem;
+    padding:.65rem .65rem .65rem .6rem;
+    border-radius:1.15rem;
+    background:rgba(248,248,248,.92);
+    box-shadow:0 10px 28px rgba(10,10,10,.22);
+    pointer-events:auto;
+    transform:translateY(-140%);
+    animation:call-drop 480ms cubic-bezier(.22,1.5,.5,1) forwards;
+    z-index:5;
+  }
+  body.reduced-fx .lp-call{ animation-duration:1ms; }
+  @keyframes call-drop{ to{ transform:translateY(0); } }
+  .lp-call__avatar{
+    flex-shrink:0;
+    width:2.75rem; height:2.75rem;
+    border-radius:50%;
+    background:var(--blue);
+    color:var(--white);
+    display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-title);
+    font-size:1.05rem;
+  }
+  .lp-call__info{ flex:1; min-width:0; }
+  .lp-call__name{
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:1rem;
+    color:var(--ink);
+    margin:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .lp-call__sub{
+    font-family:var(--font-body);
+    font-size:.8rem;
+    color:rgba(10,10,10,.55);
+    margin:.1rem 0 0;
+  }
+  .lp-call__answer{
+    flex-shrink:0;
+    width:2.6rem; height:2.6rem;
+    border-radius:50%;
+    background:#22C55E;
+    color:var(--white);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.1rem;
+  }
+  .lp-call.is-urgent .lp-call__answer{ animation:call-answer-pulse 380ms ease-in-out infinite; }
+  body.reduced-fx .lp-call.is-urgent .lp-call__answer{ animation:none; }
+  @keyframes call-answer-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.14); } }
+  /* Appel manqué : même logique de flash que .lp-card.is-missed plus haut. */
+  .lp-call.is-missed{ background:rgba(239,68,68,.16); }
+  .lp-call.is-missed .lp-call__name,
+  .lp-call.is-missed .lp-call__sub{ color:var(--alerte); }
+  /* « commande_prete » : 2e distraction stylisée façon notification (au même
+     niveau de finition que .lp-call), mais volontairement pas la même recette
+     — l'appel imite un vrai écran de téléphone (fond flouté, ancré en haut,
+     bouton rond vert) ; ici on garde le DA neo-brutaliste du jeu (nb-card,
+     bordure/ombre dures) et on reste ancré dans #card-zone en bas de l'écran,
+     zone du pouce, comme une fiche de comptoir qu'on viendrait poser devant
+     soi plutôt qu'une notif de téléphone. L'orange reprend la teinte de
+     .vie-bar-fill.is-mid / --flood (cohérence des indicateurs), pour une
+     identité de couleur propre à cette distraction, différente du vert de
+     l'appel. */
+  .lp-order{
+    pointer-events:auto;
+    display:flex; align-items:center; gap:.75rem;
+    width:min(84vw, 340px);
+    padding:.6rem .6rem .6rem .7rem;
+    background:var(--white);
+    border:var(--border);
+    border-radius:1.15rem;
+    box-shadow:var(--shadow-dark);
+    transform:translateY(120%);
+    animation:order-up 420ms var(--ease-bounce) forwards;
+  }
+  body.reduced-fx .lp-order{ animation-duration:1ms; }
+  @keyframes order-up{ to{ transform:translateY(0); } }
+  /* Une seule animation (pas order-up + card-urgent en parallèle) : l'entrée
+     est déjà terminée quand is-urgent s'active (fenêtre qui touche à sa fin),
+     la rejouer provoquerait un saut visible en redescendant la carte hors
+     écran avant de la faire remonter. card-urgent seul suffit, translateY(0)
+     de la fin d'order-up restant sinon inchangé (même schéma que .lp-card). */
+  .lp-order.is-urgent{ animation:card-urgent 260ms ease-in-out infinite; }
+  body.reduced-fx .lp-order.is-urgent{ animation:none; }
+  .lp-order__icon{
+    flex-shrink:0;
+    width:2.75rem; height:2.75rem;
+    border-radius:50%;
+    background:#F59E0B;
+    color:var(--white);
+    display:flex; align-items:center; justify-content:center;
+    font-size:1.3rem;
+  }
+  .lp-order__info{ flex:1; min-width:0; }
+  .lp-order__title{
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:.95rem;
+    color:var(--ink);
+    margin:0;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .lp-order__sub{
+    font-family:var(--font-body);
+    font-size:.78rem;
+    color:rgba(10,10,10,.55);
+    margin:.1rem 0 0;
+  }
+  .lp-order__action{
+    flex-shrink:0;
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:.82rem;
+    color:var(--white);
+    background:#F59E0B;
+    padding:.5rem .9rem;
+    border-radius:var(--radius-btn);
+    white-space:nowrap;
+  }
+  .lp-order.is-urgent .lp-order__action{ animation:call-answer-pulse 380ms ease-in-out infinite; }
+  body.reduced-fx .lp-order.is-urgent .lp-order__action{ animation:none; }
+  /* Ratée : même logique de flash que .lp-card/.lp-call.is-missed plus haut. */
+  .lp-order.is-missed{ background:rgba(239,68,68,.1); }
+  .lp-order.is-missed .lp-order__title,
+  .lp-order.is-missed .lp-order__sub{ color:var(--alerte); }
+  .lp-order.is-missed .lp-order__icon,
+  .lp-order.is-missed .lp-order__action{ background:var(--alerte); }
+
+  /* Sortie animée de tous les formats de carte (voir removeCard()) — spécificité
+     (0,2,0) plus haute que .lp-card{animation:card-in} / .lp-call{animation:
+     call-drop} / .lp-order{animation:order-up}, remplace donc proprement
+     l'animation d'entrée déjà terminée. */
+  .lp-card.is-leaving, .lp-call.is-leaving, .lp-order.is-leaving{
+    animation:card-out 150ms ease-in forwards;
+    pointer-events:none;
+  }
+  body.reduced-fx .lp-card.is-leaving, body.reduced-fx .lp-call.is-leaving, body.reduced-fx .lp-order.is-leaving{ animation-duration:1ms; }
+  @keyframes card-out{ to{ transform:translateY(-10px) scale(.92); opacity:0; } }
+
+  /* ==========================================================================
+     MESSAGE D'INTERRUPTION (retour d'onglet en cours de partie)
+     ========================================================================== */
+  #screen-interrupted{ padding:2rem; text-align:center; z-index:15; }
+  #screen-interrupted p{
+    font-family:var(--font-title);
+    font-size:clamp(1.25rem,6vw,1.75rem);
+    max-width:22ch;
+  }
+
+  /* ==========================================================================
+     ÉCRAN 3 — RÉVÉLATION (4 temps). Néo-brutalisme ClearCup assumé : c'est
+     l'écran qui doit se reconnaître au premier coup d'œil comme la marque —
+     cartes blanches à bord noir + ombre dure sur fond bleu, gros Bagel Fat
+     One, bouton pilule, exactement comme sur clearcup.ch. Chaque temps
+     occupe l'écran entier et peut avoir son propre fond, comme les sections
+     alternées blanc/bleu du site.
+     ========================================================================== */
+  #screen-revelation{ background:var(--white); }
+  .rv-temps{
+    display:none; position:absolute; inset:0;
+    flex-direction:column; align-items:center; justify-content:center;
+    gap:1.1rem; width:100%;
+    /* max() plutôt qu'un padding fixe : absorbé par le centrage vertical
+       aujourd'hui (le contenu ne remplit pas tout l'écran), mais reste correct
+       si le contenu s'allonge un jour ou sur un appareil à encoche plus grande. */
+    padding:max(2rem, env(safe-area-inset-top)) 2rem max(2rem, env(safe-area-inset-bottom));
+    text-align:center;
+  }
+  .rv-temps.is-visible{ display:flex; }
+  .rv-temps--blue{ background:var(--blue); } /* fond bleu plat, partagé par les temps 2, 3 et 4 */
+  /* Indice discret : la révélation avance maintenant au tap, pas toute seule
+     (voir runRevelation()/advanceRevelation()) — sans ça rien n'indique au
+     joueur qu'il doit toucher l'écran pour continuer. */
+  .rv-tap-hint{
+    position:absolute; left:0; right:0; bottom:max(1.5rem, env(safe-area-inset-bottom));
+    font-family:var(--font-body);
+    font-size:.8rem;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    opacity:.55;
+    animation:tap-hint-pulse 1600ms ease-in-out infinite;
+  }
+  body.reduced-fx .rv-tap-hint{ animation:none; }
+  .rv-temps--blue .rv-tap-hint{ color:var(--white); }
+  @keyframes tap-hint-pulse{ 0%,100%{ opacity:.35; } 50%{ opacity:.75; } }
+
+  /* La cause est une phrase complète de longueur variable (de "Le soleil se
+     lève. Match nul." à des phrases ~90 caractères), pas une étiquette courte
+     — une pastille pilule (.nb-badge, pensée pour du texte 1 ligne) l'aurait
+     fait retomber sur plusieurs lignes dans une forme de capsule, ce qui
+     jurait visuellement. On la présente donc comme une carte (mêmes codes
+     que .rv-card/.nb-card : fond blanc, bord noir, ombre dure), cohérent
+     avec le langage visuel du reste de la révélation (temps 3 et 4). */
+  #rv-cause{
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:.95rem;
+    line-height:1.4;
+    color:var(--ink);
+    padding:1rem 1.25rem;
+    max-width:30ch;
+    opacity:0;
+    animation:fade-up 500ms var(--ease-out) forwards;
+  }
+  #rv-score{
+    font-family:var(--font-title);
+    font-size:clamp(2.25rem,10vw,3.5rem);
+    line-height:1.05;
+    max-width:16ch;
+    margin:0;
+    opacity:0;
+    animation:fade-up 500ms var(--ease-out) forwards;
+  }
+  @keyframes fade-up{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+
+  .rv-card{
+    padding:1.75rem 1.5rem;
+    width:min(84vw,380px);
+    display:flex;
+    flex-direction:column;
+    align-items:center; /* centre chaque enfant, y compris .rv-punch (max-width:30ch) sans margin:auto isolé */
+  }
+  /* Même mécanisme de rythme pour les deux cartes de la révélation (un seul
+     gap piloté par le parent flex plutôt que des marges isolées par enfant) —
+     valeur différente pour chacune selon sa densité de contenu : temps 3 est
+     plus compact (3 lignes courtes), temps 4 plus chargé (4 blocs, dont un logo). */
+  #rv-temps-3 .rv-card{ gap:.4rem; }
+  #rv-temps-4 .rv-card{ gap:.85rem; }
+  .rv-card-label{
+    font-family:var(--font-body);
+    font-size:.8rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:rgba(10,10,10,.55);
+    margin:0;
+  }
+  #rv-validation-nb{
+    font-family:var(--font-title);
+    font-size:clamp(1.75rem,8vw,2.5rem);
+    line-height:1.15;
+    margin:0;
+  }
+  #rv-validation-sub{
+    font-family:var(--font-body);
+    font-size:1rem;
+    line-height:1.4;
+    margin:0;
+  }
+
+  /* Temps 4 : rythme vertical piloté par des marges explicites à 3 niveaux
+     (accroche serrée → grand espace avant la carte-preuve → espace
+     intermédiaire avant le CTA) plutôt que par le gap générique de .rv-temps
+     (1.1rem, partagé avec temps 1-3), qu'on neutralise ici. */
+  #rv-temps-4{ gap:0; }
+  .rv-retournement-intro{
+    font-family:var(--font-body);
+    font-size:1rem;
+    color:var(--white);
+    margin:0 0 .35rem; /* serré : sert de « label » au chiffre qui suit */
+  }
+  .rv-18000{
+    font-family:var(--font-title);
+    font-size:clamp(2.25rem,10vw,3.25rem);
+    color:var(--white);
+    margin:0 0 1.5rem; /* respiration nette avant la carte-preuve */
+  }
+  .rv-bars{ width:100%; display:flex; flex-direction:column; gap:.5rem; }
+  .rv-bar-row{ display:flex; align-items:center; gap:.5rem; }
+  .rv-bar-label{ font-family:var(--font-body); font-size:.75rem; font-weight:700; width:3.5rem; text-align:right; flex-shrink:0; }
+  .rv-bar-track{ flex:1; height:14px; background:rgba(10,10,10,.08); border-radius:999px; overflow:hidden; }
+  .rv-bar-fill{ display:block; height:100%; border-radius:999px; }
+  .rv-bar-fill--soiree{ width:100%; background:var(--ink); }
+  /* min-width : le score max possible (cap 45s / 18000s de soirée) donne
+     0,25% de large, potentiellement <1px et invisible/mal rendu selon
+     l'appareil. Le texte "%" reste calculé exactement (JS), seule la barre
+     est plancher-ée pour rester visible comme un fin trait volontaire. */
+  .rv-bar-fill--toi{ background:var(--blue); min-width:3px; }
+  /* Remonté depuis clamp(1.5rem,7vw,2.25rem) et aligné sur #rv-validation-nb
+     du temps 3 : c'est le vrai payoff personnel/émotionnel, il ne doit pas
+     être plus petit que .rv-18000 qui n'est qu'un fait générique. Reste sous
+     le max de .rv-18000 (3.25rem) : le hook plein écran garde la priorité. */
+  .rv-percent{ font-family:var(--font-title); font-size:clamp(1.75rem,8vw,2.5rem); line-height:1.15; margin:0; }
+  .rv-punch{ font-family:var(--font-body); font-size:.95rem; line-height:1.4; max-width:30ch; margin:0; }
+  .rv-punch strong{ font-weight:700; }
+
+  .rv-brand{ margin:0; } /* espacement géré par le gap de #rv-temps-4 .rv-card, pas de double-espacement */
+  .rv-brand svg{ width:110px; height:auto; display:block; }
+  #btn-rejouer{ margin-top:1.1rem; } /* espace intermédiaire avant le CTA */
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ============ ÉCRAN 0 — Avertissement stroboscope (1er lancement) ============ -->
+  <section id="screen-strobe" class="screen">
+    <h1>Avant de commencer</h1>
+    <p>Ce jeu bouge vite et flashe un peu. Si les effets stroboscopiques te dérangent, choisis la version douce — le jeu reste identique.</p>
+    <div class="strobe-actions">
+      <button type="button" id="btn-strobe-normal">Continuer</button>
+      <button type="button" id="btn-strobe-reduced">Effets réduits</button>
+    </div>
+  </section>
+
+  <!-- ============ ÉCRAN 1 — Accueil ============ -->
+  <section id="screen-accueil" class="screen animated-gradient">
+    <div class="accueil-brand" aria-hidden="true"><svg id="LOGO_SEC_accueil" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 217.11 283.63">
+  <defs>
+    <style>
+      /* Classes scopées à #LOGO_SEC_accueil (même remarque que pour les
+         autres SVG inlinés de la page sur la collision de classes). */
+      #LOGO_SEC_accueil .cls-1 {
+        stroke-width: 2px;
+      }
+
+      #LOGO_SEC_accueil .cls-1, #LOGO_SEC_accueil .cls-2, #LOGO_SEC_accueil .cls-3, #LOGO_SEC_accueil .cls-4, #LOGO_SEC_accueil .cls-5 {
+        stroke: var(--ink);
+        stroke-miterlimit: 10;
+      }
+
+      #LOGO_SEC_accueil .cls-2, #LOGO_SEC_accueil .cls-6 {
+        fill: var(--white);
+      }
+
+      #LOGO_SEC_accueil .cls-2, #LOGO_SEC_accueil .cls-3, #LOGO_SEC_accueil .cls-4, #LOGO_SEC_accueil .cls-5 {
+        stroke-width: 2.73px;
+      }
+
+      #LOGO_SEC_accueil .cls-4 {
+        fill: var(--blue);
+      }
+
+      #LOGO_SEC_accueil .cls-5 {
+        fill: none;
+      }
+    </style>
+  </defs>
+  <g id="Calque_1-2">
+    <g>
+      <path class="cls-6" d="M214.8,69.78c-3.15,11.72-19.22,15.79-19.22,15.79,0,0,1.78,11.22-2.06,17.71-3.84,6.5-10.93,12.4-15.21,13.29-4.28.89-11.22,4.43-19.19-3.39,0,0-3.66-2.71-5-5.2l3.63-18.43s7.72,11.08,17.61,10.76c9.89-.31,5.17-18.14,5.17-18.14,0,0-8.79-4.27-8.36-12.15,0,0-.87-10.54,4.46-13.73h0c.06-.04.29-.17.67-.33h0c-.01-.07-.08-.41-.15-.94-.34-2.62-.66-10.05,5.76-13.71,0,0,6.36-3.05,8.42,2.49,0,0-.78.95-1.71,2.37.24-.33,1.25-1.46,2.71-2.37,2.01-1.26,4.87-2.12,7.78.02,0,0,1.39.93,1.74,2.4.22.92,1.15,1.45,2.02,1.08,2.31-.99,5.66-1.31,8.45,2.8,0,0,5.56,8.14,2.46,19.68Z"/>
+      <g>
+        <path class="cls-6" d="M176.69,180.98c-1.69-5.95-6.71-10.82-12.56-12.82-6.37-2.18-13.58-.9-19.42,3.25l.06-.06-7.14-17.79-16.84,5,9.59,25.55h0c-4.34,2.19-7.05,6.69-8.16,11.63-1.43,6.36,1.26,15.77,8.2,21.01,10.59,7.97,27.52-4.33,30.39-6.41,2.3-1.67,20.01-14.9,15.9-29.36Z"/>
+        <path class="cls-6" d="M112.69,158.93s-4.04,37.44-37.07,27.2c.11.59.16,5.77-4.52,10.9-3.82,4.2-10.18,4.37-14.45,2.85-10.55-3.76-12.49-22.71-6.43-34.6,4.23-8.32,11.33-10.5,17.72-7.49,5.48,2.58,6.51,10.05,6.64,11.1,22.32,4.47,25.05-11.93,25.05-11.93l13.06,1.97Z"/>
+        <path class="cls-2" d="M60.59,81.46s-14.6-11.3-30.44-1.33c0,0-10.63,3.47-10.93,23.23-11.12,0-13.82,5.58-13.82,5.58-4.94,7.56-5.55,21.83-.6,22.4,6.29.72,7.85-4.37,7.85-4.37,0,0-.83,10.87,7.41,12.13,6.97,1.07,7.66-5.26,7.66-5.26,0,0,.81,7,11.45,6.35,5.69-.35,9.46-10.47,5.79-13.17-1.31-.96-6.88,1.41-9.01,1.98-3.28.88-1.26-10.84-.37-9.88,1.53,1.65,3.23,8.38,7.04,6.32,5.01-2.7,1.92-11.53,2.12-10.81-3.4-9.52-12.02-7.28-12.02-7.28-2.87-11.85,8-17.43,8-17.43,13.89-6.04,24.99,8.74,24.99,8.74"/>
+        <path class="cls-4" d="M173.03,12.16l-26.85,136.04c-33.01,24.12-66.02,0-66.02,0L40.28,12.25c9.41,1.68,35.45,2.87,66.11,2.87s57.73-1.25,66.64-2.96Z"/>
+        <path class="cls-5" d="M99.64,156.95s-3.42,20.56-33.93,9.38"/>
+        <path class="cls-5" d="M112.7,158.92s-5.06,46.88-50.14,21.38"/>
+        <path class="cls-5" d="M74.58,168.89c-.12-1.01-1.14-8.51-6.64-11.1-6.39-3.01-13.49-.83-17.72,7.49-6.05,11.89-4.12,30.84,6.43,34.6,4.26,1.52,10.63,1.35,14.45-2.85,4.67-5.13,4.63-10.31,4.52-10.91"/>
+        <line class="cls-5" x1="3.74" y1="163.68" x2="3.74" y2="163.67"/>
+        <line class="cls-5" x1="120.52" y1="158.57" x2="130.58" y2="185.39"/>
+        <line class="cls-5" x1="137.36" y1="153.57" x2="144.5" y2="171.35"/>
+        <path class="cls-5" d="M139.76,175.72c6.26-7.45,15.88-10.38,24.1-7.56,5.85,2,10.87,6.87,12.56,12.82,4.12,14.46-13.59,27.69-15.9,29.36-2.87,2.09-19.8,14.39-30.39,6.41-6.95-5.23-9.63-14.65-8.2-21.01,1.11-4.94,3.82-9.43,8.16-11.63"/>
+        <path class="cls-5" d="M133,207.97c1.27-3.88,3.9-10.17,9.44-16.2,8.43-9.19,18.46-12.21,22.65-13.21"/>
+        <g>
+          <path class="cls-5" d="M157.76,89.54s7.72,11.08,17.61,10.77,5.17-18.14,5.17-18.14c0,0-8.78-4.27-8.36-12.15,0,0-.87-10.54,4.46-13.73,0,0,1.92-1.11,4.1-1.23.86-.05,1.06-.18,2.47.53,4.67,2.35.98,12.08.98,12.08,0,0,8.82-4.07,10.95,8.86"/>
+          <path class="cls-5" d="M196,59.38s-6.11,1.63-8.83-2.78,4.17-12.8,4.17-12.8c-2.05-5.54-8.42-2.5-8.42-2.5-7.87,4.49-5.61,14.65-5.61,14.65"/>
+          <path class="cls-5" d="M209.1,61.54s-17.52,11.11-12.62-4.55c1.2-3.83,4.7-8.01,4.7-8.01,2.23-2.96-1.06-5.17-1.06-5.17-5.42-3.99-10.67,2.44-10.57,2.47"/>
+          <path class="cls-5" d="M201.18,48.99c.64-.56,6.64-5.57,11.17,1.11,0,0,5.56,8.14,2.45,19.68-3.15,11.72-19.21,15.79-19.21,15.79,0,0,1.77,11.22-2.07,17.72-3.84,6.5-10.92,12.4-15.21,13.29s-11.22,4.43-19.19-3.4c0,0-3.66-2.71-5.01-5.19"/>
+        </g>
+        <path class="cls-2" d="M156.4,46.24c0,11.88-6.94,21.52-15.51,21.52-5.15,0-9.72-3.5-12.53-8.87.36.07.71.11,1.07.11,4.64,0,8.39-5.51,8.39-12.31s-3.75-12.31-8.39-12.31c-.54,0-1.07.07-1.58.23,2.75-5.95,7.56-9.89,13.03-9.89,8.57,0,15.51,9.63,15.51,21.53Z"/>
+        <path class="cls-2" d="M128.68,46.24c0,3.47-.59,6.75-1.64,9.64-.26.74-.56,1.45-.88,2.14-2.78,5.86-7.56,9.73-12.99,9.73s-9.86-3.61-12.66-9.12c.66.24,1.34.36,2.04.36,4.64,0,8.4-5.51,8.4-12.31s-3.76-12.31-8.4-12.31c-.9,0-1.77.21-2.59.6,2.72-6.16,7.61-10.26,13.2-10.26s10.59,4.19,13.3,10.45c.21.46.4.94.57,1.43,1.05,2.9,1.64,6.17,1.64,9.64Z"/>
+        <path class="cls-1" d="M110.23,46.68c0,6.8-3.76,12.31-8.4,12.31,0,0-.01,0-.02,0-1.2,0-2.27-.79-2.74-1.9-1.35-3.18-2.12-6.9-2.12-10.86,0-3.53.61-6.86,1.7-9.79.4-1.09,1.36-1.9,2.5-2.03.22-.03.45-.04.68-.04,4.64,0,8.4,5.52,8.4,12.31Z"/>
+        <path class="cls-3" d="M137.82,46.68c0,6.8-3.75,12.31-8.39,12.31-.36,0-.72-.04-1.07-.11-.49-.95-.94-1.95-1.32-3.01,1.05-2.9,1.64-6.17,1.64-9.64s-.59-6.75-1.64-9.64c.25-.68.52-1.36.82-1.99.51-.15,1.04-.23,1.58-.23,4.64,0,8.39,5.52,8.39,12.31Z"/>
+        <path d="M117.03,0c16.59.17,33.95.05,50.4,1.92,2.27.26,8.24.86,9.95,2.05,1.57,1.08,1.41,4.73,1.21,6.47-.37,3.34-5.1,3.53-7.83,3.93-8.51,1.24-17.32,1.36-25.9,1.7-27.25,1.1-54.86,1.17-82.07-.23-6.78-.35-13.64-.49-20.36-1.48-1.9-.28-4.57-.46-6.32-1.57-.98-.62-1.51-1.76-1.51-2.92v-3.1c0-1.07.47-2.11,1.35-2.71,2.01-1.37,5.22-1.58,7.44-1.88C60.75-.13,79.15.41,96.66.01,96.66.01,116.63,0,117.03,0Z"/>
+      </g>
+    </g>
+    <g>
+      <g>
+        <path d="M145.89,273.43c-3.27,0-6.21-.67-8.83-2.02-2.62-1.35-4.68-3.36-6.18-6.03-1.5-2.67-2.25-5.95-2.25-9.85s.76-7.27,2.28-10.1c1.52-2.83,3.6-5.01,6.25-6.53,2.65-1.52,5.68-2.28,9.08-2.28,3.93,0,6.95.55,9.05,1.65,2.1,1.1,3.15,2.73,3.15,4.9,0,1.67-.45,3.04-1.35,4.13-.9,1.08-2.13,1.62-3.7,1.62-1.33,0-2.62-.17-3.88-.53-1.25-.35-2.71-.53-4.38-.53-2.13,0-3.82.62-5.05,1.85-1.23,1.23-1.85,2.85-1.85,4.85s.62,3.61,1.85,4.93c1.23,1.32,2.92,1.98,5.05,1.98,1.13,0,2.17-.09,3.12-.28.95-.18,1.88-.38,2.8-.58.92-.2,1.91-.3,2.98-.3,1.77,0,3.07.58,3.9,1.73.83,1.15,1.25,2.58,1.25,4.28s-.62,3.08-1.85,4.13c-1.23,1.05-2.86,1.81-4.88,2.28-2.02.47-4.21.7-6.58.7Z"/>
+        <path d="M169.54,273.33c-2.33,0-4.23-.88-5.7-2.65-1.47-1.77-2.22-4.25-2.25-7.45l-.05-11.55c0-1.43.44-2.56,1.33-3.38.88-.82,2.09-1.23,3.62-1.23s2.65.41,3.55,1.23c.9.82,1.35,1.94,1.35,3.38v10.45c0,2.5.98,3.75,2.95,3.75.97,0,1.62-.36,1.95-1.08.33-.72.5-1.64.5-2.78v-10.35c0-1.3.45-2.39,1.35-3.28.9-.88,2.07-1.33,3.5-1.33s2.66.44,3.48,1.33c.82.88,1.22,1.98,1.22,3.28v16.4c0,1.6-.36,2.88-1.08,3.83s-1.88,1.42-3.47,1.42-2.79-.47-3.68-1.42c-.88-.95-1.33-2.23-1.33-3.83v-.85h-.9c0,1.93-.58,3.43-1.73,4.5-1.15,1.07-2.69,1.6-4.62,1.6Z"/>
+        <path d="M206.64,273.33c-1.83,0-3.36-.57-4.58-1.7-1.22-1.13-1.99-2.6-2.33-4.4h-.9v11.5c0,1.37-.38,2.53-1.15,3.48-.77.95-1.93,1.43-3.5,1.43s-2.66-.48-3.48-1.43c-.82-.95-1.22-2.14-1.22-3.58v-18.7c0-1.67-.06-3.08-.17-4.23-.12-1.15-.23-2.19-.33-3.12-.13-1.4.15-2.59.85-3.58s1.83-1.58,3.4-1.78c2.03-.27,3.48.09,4.33,1.08.85.98,1.28,2.51,1.28,4.58v2.4l.2.05c.17-1.3.56-2.58,1.18-3.83.62-1.25,1.49-2.28,2.62-3.1,1.13-.82,2.57-1.22,4.3-1.22,2.9,0,5.06,1.16,6.48,3.47,1.42,2.32,2.13,5.41,2.13,9.28,0,8.94-3.03,13.4-9.1,13.4ZM198.64,259.83c0,.53.07.95.2,1.25.2.63.62,1.09,1.27,1.38.65.28,1.63.43,2.93.43,1.67,0,2.81-.25,3.43-.75.62-.5.92-1.27.92-2.3s-.3-1.84-.9-2.33c-.6-.48-1.73-.73-3.4-.73-1.33,0-2.33.14-2.98.43-.65.28-1.08.74-1.27,1.38-.13.3-.2.72-.2,1.25Z"/>
+      </g>
+      <g>
+        <path d="M18.96,273.43c-3.27,0-6.21-.67-8.83-2.02-2.62-1.35-4.68-3.36-6.18-6.03-1.5-2.67-2.25-5.95-2.25-9.85s.76-7.27,2.28-10.1c1.52-2.83,3.6-5.01,6.25-6.53,2.65-1.52,5.68-2.28,9.08-2.28,3.93,0,6.95.55,9.05,1.65,2.1,1.1,3.15,2.73,3.15,4.9,0,1.67-.45,3.04-1.35,4.13-.9,1.08-2.13,1.62-3.7,1.62-1.33,0-2.63-.17-3.88-.53-1.25-.35-2.71-.53-4.38-.53-2.13,0-3.82.62-5.05,1.85-1.23,1.23-1.85,2.85-1.85,4.85s.62,3.61,1.85,4.93c1.23,1.32,2.92,1.98,5.05,1.98,1.13,0,2.18-.09,3.13-.28.95-.18,1.88-.38,2.8-.58.92-.2,1.91-.3,2.98-.3,1.77,0,3.07.58,3.9,1.73.83,1.15,1.25,2.58,1.25,4.28s-.62,3.08-1.85,4.13c-1.23,1.05-2.86,1.81-4.88,2.28s-4.21.7-6.58.7Z"/>
+        <path d="M39.31,273.33c-1.63,0-2.86-.43-3.68-1.3-.82-.87-1.23-1.95-1.23-3.25v-29c0-1.43.41-2.63,1.23-3.58.82-.95,2.04-1.43,3.68-1.43,1.47,0,2.6.48,3.4,1.43.8.95,1.2,2.11,1.2,3.47v29.1c0,1.3-.4,2.38-1.2,3.25-.8.87-1.93,1.3-3.4,1.3Z"/>
+        <path d="M46.21,260.33c0-2.63.52-4.95,1.58-6.95,1.05-2,2.55-3.57,4.5-4.7,1.95-1.13,4.28-1.7,6.98-1.7,2.1,0,3.99.38,5.68,1.15,1.68.77,3.01,1.79,3.98,3.08.97,1.28,1.45,2.69,1.45,4.23s-.47,2.73-1.4,3.4c-.93.67-2.32,1-4.15,1h-10.5c0,.87.34,1.58,1.02,2.15.68.57,1.84.85,3.48.85.83,0,1.61-.08,2.33-.25.72-.17,1.45-.32,2.2-.47.75-.15,1.59-.22,2.53-.22,1.33,0,2.43.47,3.3,1.42.87.95,1.3,2.26,1.3,3.93,0,1.97-1.01,3.5-3.03,4.6-2.02,1.1-4.66,1.65-7.93,1.65-2.3,0-4.46-.45-6.48-1.35-2.02-.9-3.66-2.33-4.93-4.28-1.27-1.95-1.9-4.46-1.9-7.53ZM62.41,258.18c.5,0,.67-.23.5-.7-.13-.47-.53-.95-1.2-1.45-.67-.5-1.63-.75-2.9-.75-1.47,0-2.56.32-3.28.95-.72.63-1.08,1.28-1.08,1.95h7.95Z"/>
+        <path d="M80.12,273.33c-2.47,0-4.39-.67-5.78-2-1.38-1.33-2.08-3.2-2.08-5.6s.8-4.14,2.4-5.23c1.6-1.08,3.65-1.62,6.15-1.62,1.47,0,2.8.1,4,.3s2.28.48,3.25.85h.15v-.75c0-.77-.28-1.38-.85-1.83-.57-.45-1.28-.66-2.15-.62-.83,0-1.54.05-2.13.15-.58.1-1.31.27-2.18.5-1.6.4-2.98.37-4.15-.1-1.17-.47-1.97-1.38-2.4-2.75-.4-1.43-.31-2.63.27-3.6.58-.97,1.48-1.72,2.68-2.25,1.03-.5,2.19-.92,3.48-1.25,1.28-.33,2.68-.5,4.18-.5,4.37,0,7.58,1.06,9.63,3.18s3.08,5.66,3.08,10.63v7.75c0,1.37-.42,2.5-1.25,3.4-.83.9-1.98,1.35-3.45,1.35-1.6,0-2.79-.45-3.58-1.35-.78-.9-1.18-2-1.18-3.3v-1.15h-1c0,.87-.16,1.75-.47,2.65-.32.9-.97,1.65-1.95,2.25-.98.6-2.54.9-4.68.9ZM80.62,262.38c0,.57.21.97.62,1.2.42.23,1.33.35,2.73.35,1.27,0,2.15-.12,2.65-.35.5-.23.75-.63.75-1.2,0-.53-.25-.91-.75-1.13-.5-.22-1.38-.32-2.65-.32-1.4,0-2.31.11-2.73.32-.42.22-.62.59-.62,1.13Z"/>
+        <path d="M105.22,273.33c-1.57,0-2.78-.45-3.65-1.35-.87-.9-1.3-2.03-1.3-3.4v-16.4c0-1.43.43-2.62,1.3-3.58.87-.95,2.08-1.42,3.65-1.42s2.77.47,3.6,1.42c.83.95,1.25,2.11,1.25,3.48v1.05h.95c.13-1.77.8-3.22,2-4.35,1.2-1.13,2.62-1.7,4.25-1.7s2.93.5,3.88,1.5c.95,1,1.43,2.33,1.43,4,0,1.57-.45,2.87-1.35,3.9-.9,1.03-2.05,1.55-3.45,1.55-1.17,0-2.14-.28-2.93-.83-.78-.55-1.36-1.19-1.73-1.93-1.07-.13-1.84-.02-2.33.33-.48.35-.73,1.04-.73,2.08v10.9c0,1.37-.42,2.5-1.25,3.4-.83.9-2.03,1.35-3.6,1.35Z"/>
+      </g>
+    </g>
+  </g>
+</svg></div>
+    <div id="accueil-verre-zone"></div>
+    <h1 class="accueil-title">Lâche pas</h1>
+    <p class="accueil-hint">Garde le doigt sur ton verre.</p>
+
+    <div class="accueil-menu">
+      <button type="button" id="btn-commencer" class="nb-btn">Commencer</button>
+      <button type="button" id="btn-classement" class="nb-btn nb-btn--white">Classement</button>
+      <button type="button" id="btn-regles" class="nb-btn nb-btn--white">Règles</button>
+    </div>
+  </section>
+
+  <!-- ============ ÉCRAN 1.5 — Attente (avant le lancement) ============ -->
+  <section id="screen-pret" class="screen">
+    <p class="pret-instruction">Pose ton doigt sur le verre pour commencer.</p>
+    <div id="pret-verre-zone"></div>
+  </section>
+
+  <!-- ============ ÉCRAN 2 — Jeu ============ -->
+  <section id="screen-jeu" class="screen">
+    <div id="flood" aria-hidden="true"></div>
+    <div id="jeu-hud">
+      <div class="vie-bar-track"><div id="vie-bar-fill" class="vie-bar-fill"></div></div>
+      <div id="timer">0.0</div>
+    </div>
+    <div id="jeu-verre-zone"></div>
+    <div id="card-zone"></div>
+  </section>
+
+  <!-- ============ Message d'interruption (retour d'onglet) ============ -->
+  <section id="screen-interrupted" class="screen">
+    <p id="interrupted-text"></p>
+  </section>
+
+  <!-- ============ ÉCRAN 3 — Révélation ============ -->
+  <section id="screen-revelation" class="screen">
+    <div class="rv-temps" id="rv-temps-1"></div>
+
+    <div class="rv-temps rv-temps--blue" id="rv-temps-2">
+      <p id="rv-score"></p>
+      <p id="rv-cause" class="nb-card"></p>
+      <p class="rv-tap-hint" aria-hidden="true">Touche l’écran pour continuer</p>
+    </div>
+
+    <div class="rv-temps rv-temps--blue" id="rv-temps-3">
+      <div class="nb-card rv-card">
+        <p class="rv-card-label">Comparé aux autres joueurs</p>
+        <p id="rv-validation-nb"></p>
+        <p id="rv-validation-sub"></p>
+      </div>
+      <p class="rv-tap-hint" aria-hidden="true">Touche l’écran pour continuer</p>
+    </div>
+
+    <div class="rv-temps rv-temps--blue" id="rv-temps-4">
+      <p class="rv-retournement-intro">Une soirée dure environ 5 heures.</p>
+      <p class="rv-18000">18 000 secondes.</p>
+      <div class="nb-card rv-card">
+        <div class="rv-bars" aria-hidden="true">
+          <div class="rv-bar-row">
+            <span class="rv-bar-label">Toi</span>
+            <span class="rv-bar-track"><span class="rv-bar-fill rv-bar-fill--toi" id="rv-bar-toi"></span></span>
+          </div>
+          <div class="rv-bar-row">
+            <span class="rv-bar-label">Soirée</span>
+            <span class="rv-bar-track"><span class="rv-bar-fill rv-bar-fill--soiree"></span></span>
+          </div>
+        </div>
+        <p class="rv-percent" id="rv-percent"></p>
+        <p class="rv-punch">Personne ne tient. C'est pas un problème d'attention.<br><strong>C'est pour ça qu'on a fait ClearCup.</strong></p>
+        <div class="rv-brand" aria-hidden="true"><svg id="Calque_2" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 293.3 101.8">
+  <defs>
+    <style>
+      /* Classes scopées à #Calque_2 (voir même remarque dans le logo d'accueil,
+         #Calque_2_accueil, sur la collision de classes entre SVG inlinés). */
+      #Calque_2 .st0 {
+        isolation: isolate;
+        fill: var(--ink);
+      }
+
+      #Calque_2 .st1 {
+        stroke-width: .9px;
+      }
+
+      #Calque_2 .st1, #Calque_2 .st2, #Calque_2 .st3, #Calque_2 .st4, #Calque_2 .st5 {
+        stroke: var(--ink);
+        stroke-miterlimit: 10;
+      }
+
+      #Calque_2 .st2, #Calque_2 .st3, #Calque_2 .st4, #Calque_2 .st5 {
+        stroke-width: 1.3px;
+      }
+
+      #Calque_2 .st6, #Calque_2 .st4 {
+        fill: var(--white);
+      }
+
+      #Calque_2 .st3 {
+        fill: var(--blue);
+      }
+
+      #Calque_2 .st5 {
+        fill: none;
+      }
+    </style>
+  </defs>
+  <g id="Calque_1-2">
+    <g>
+      <path class="st6" d="M99.1,32.2c-1.4,5.4-8.9,7.3-8.9,7.3,0,0,.8,5.2-.9,8.2-1.8,3-5,5.7-7,6.1-2,.4-5.2,2-8.8-1.6,0,0-1.7-1.2-2.3-2.4l1.7-8.5s3.6,5.1,8.1,5c4.6-.1,2.4-8.4,2.4-8.4,0,0-4.1-2-3.9-5.6,0,0-.4-4.9,2.1-6.3h0s.1,0,.3-.1h0s0-.2,0-.4c-.2-1.2-.3-4.6,2.7-6.3,0,0,2.9-1.4,3.9,1.1,0,0-.4.4-.8,1.1.1-.1.6-.7,1.2-1.1.9-.6,2.2-1,3.6,0,0,0,.6.4.8,1.1,0,.4.5.7.9.5,1.1-.5,2.6-.6,3.9,1.3,0,0,2.6,3.8,1.1,9.1h0Z"/>
+      <g>
+        <path class="st6" d="M81.5,83.5c-.8-2.7-3.1-5-5.8-5.9-2.9-1-6.3-.4-9,1.5h0s-3.3-8.2-3.3-8.2l-7.8,2.3,4.4,11.8h0c-2,1-3.2,3.1-3.8,5.4-.7,2.9.6,7.3,3.8,9.7,4.9,3.7,12.7-2,14-3,1.1-.8,9.2-6.9,7.3-13.5h0Z"/>
+        <path class="st6" d="M52,73.3s-1.9,17.3-17.1,12.6c0,.3,0,2.7-2.1,5-1.8,1.9-4.7,2-6.7,1.3-4.9-1.7-5.8-10.5-3-16,2-3.8,5.2-4.8,8.2-3.5,2.5,1.2,3,4.6,3.1,5.1,10.3,2.1,11.6-5.5,11.6-5.5l6,.9h0Z"/>
+        <path class="st4" d="M28,37.6s-6.7-5.2-14-.6c0,0-4.9,1.6-5,10.7-5.1,0-6.4,2.6-6.4,2.6-2.3,3.5-2.6,10.1-.3,10.3,2.9.3,3.6-2,3.6-2,0,0-.4,5,3.4,5.6,3.2.5,3.5-2.4,3.5-2.4,0,0,.4,3.2,5.3,2.9,2.6-.2,4.4-4.8,2.7-6.1-.6-.4-3.2.7-4.1.9-1.5.4-.6-5-.2-4.6.7.8,1.5,3.9,3.2,2.9,2.3-1.2.9-5.3,1-5-1.6-4.4-5.5-3.4-5.5-3.4-1.3-5.5,3.7-8,3.7-8,6.4-2.8,11.5,4,11.5,4"/>
+        <path class="st3" d="M79.8,5.6l-12.4,62.8c-15.2,11.1-30.5,0-30.5,0L18.6,5.7c4.3.8,16.4,1.3,30.5,1.3s26.6-.6,30.7-1.4Z"/>
+        <path class="st5" d="M46,72.4s-1.6,9.5-15.6,4.3"/>
+        <path class="st5" d="M52,73.3s-2.3,21.6-23.1,9.9"/>
+        <path class="st5" d="M34.4,77.9c0-.5-.5-3.9-3.1-5.1-3-1.4-6.2-.4-8.2,3.5-2.8,5.5-1.9,14.2,3,16,2,.7,4.9.6,6.7-1.3,2.2-2.4,2.1-4.8,2.1-5"/>
+        <line class="st5" x1="1.7" y1="75.5" x2="1.7" y2="75.5"/>
+        <line class="st5" x1="55.6" y1="73.2" x2="60.2" y2="85.5"/>
+        <line class="st5" x1="63.4" y1="70.8" x2="66.7" y2="79.1"/>
+        <path class="st5" d="M64.5,81.1c2.9-3.4,7.3-4.8,11.1-3.5,2.7.9,5,3.2,5.8,5.9,1.9,6.7-6.3,12.8-7.3,13.5-1.3,1-9.1,6.6-14,3-3.2-2.4-4.4-6.8-3.8-9.7.5-2.3,1.8-4.3,3.8-5.4"/>
+        <path class="st5" d="M61.4,95.9c.6-1.8,1.8-4.7,4.3-7.5,3.9-4.2,8.5-5.6,10.4-6.1"/>
+        <g>
+          <path class="st5" d="M72.8,41.3s3.6,5.1,8.1,5,2.4-8.4,2.4-8.4c0,0-4.1-2-3.9-5.6,0,0-.4-4.9,2.1-6.3,0,0,.9-.5,1.9-.6.4,0,.5,0,1.1.2,2.2,1.1.4,5.6.4,5.6,0,0,4.1-1.9,5.1,4.1"/>
+          <path class="st5" d="M90.4,27.4s-2.8.8-4.1-1.3,1.9-5.9,1.9-5.9c-.9-2.6-3.9-1.1-3.9-1.1-3.6,2.1-2.6,6.8-2.6,6.8"/>
+          <path class="st5" d="M96.5,28.4s-8.1,5.1-5.8-2.1c.6-1.8,2.2-3.7,2.2-3.7,1-1.4-.5-2.4-.5-2.4-2.5-1.8-4.9,1.1-4.9,1.1"/>
+          <path class="st5" d="M92.8,22.6c.3-.3,3.1-2.6,5.2.5,0,0,2.6,3.8,1.1,9.1-1.4,5.3-8.9,7.3-8.9,7.3,0,0,.8,5.2-.9,8.2s-5,5.7-7,6.1-5.2,2-8.8-1.6c0,0-1.7-1.2-2.3-2.4"/>
+        </g>
+        <path class="st4" d="M72.2,21.3c0,5.5-3.2,9.9-7.2,9.9s-4.5-1.6-5.8-4.1c.2,0,.3,0,.5,0,2.1,0,3.9-2.5,3.9-5.7s-1.7-5.7-3.9-5.7-.5,0-.7.1c1.3-2.7,3.5-4.6,6-4.6,3.9,0,7.2,4.4,7.2,9.9h0Z"/>
+        <path class="st4" d="M59.4,21.3c0,1.6-.3,3.1-.8,4.4-.1.3-.3.7-.4,1-1.3,2.7-3.5,4.5-6,4.5s-4.5-1.7-5.8-4.2c.3.1.6.2.9.2,2.1,0,3.9-2.5,3.9-5.7s-1.7-5.7-3.9-5.7-.8.1-1.2.3c1.3-2.8,3.5-4.7,6.1-4.7s4.9,1.9,6.1,4.8c0,.2.2.4.3.7.5,1.3.8,2.9.8,4.5h0Z"/>
+        <path class="st1" d="M50.8,21.5c0,3.1-1.7,5.7-3.9,5.7h0c-.6,0-1-.4-1.3-.9-.6-1.5-1-3.2-1-5s.3-3.2.8-4.5c.2-.5.6-.9,1.2-.9,0,0,.2,0,.3,0,2.1,0,3.9,2.6,3.9,5.7h0Z"/>
+        <path class="st2" d="M63.6,21.5c0,3.1-1.7,5.7-3.9,5.7s-.3,0-.5,0c-.2-.4-.4-.9-.6-1.4.5-1.3.8-2.9.8-4.5s-.3-3.1-.8-4.5c.1-.3.2-.6.4-.9.2,0,.5-.1.7-.1,2.1,0,3.9,2.6,3.9,5.7h0Z"/>
+        <path d="M54,0c7.7,0,15.7,0,23.3.9,1.1.1,3.8.4,4.6.9.7.5.7,2.2.6,3-.2,1.5-2.3,1.6-3.6,1.8-3.9.6-8,.6-11.9.8-12.6.5-25.3.5-37.9-.1-3.1-.2-6.3-.2-9.4-.7-.9-.1-2.1-.2-2.9-.7-.5-.3-.7-.8-.7-1.3v-1.4c0-.5.2-1,.6-1.2.9-.6,2.4-.7,3.4-.9C28,0,36.5.2,44.6,0h9.4Z"/>
+      </g>
+    </g>
+    <g>
+      <g class="st0">
+        <g class="st0">
+          <path d="M232.8,66.6c-2.8,0-5.3-.6-7.5-1.7-2.2-1.2-4-2.9-5.3-5.1-1.3-2.3-1.9-5.1-1.9-8.4s.6-6.2,1.9-8.6c1.3-2.4,3.1-4.3,5.3-5.6,2.3-1.3,4.8-1.9,7.7-1.9s5.9.5,7.7,1.4c1.8.9,2.7,2.3,2.7,4.2s-.4,2.6-1.1,3.5-1.8,1.4-3.2,1.4-2.2-.1-3.3-.4c-1.1-.3-2.3-.4-3.7-.4s-3.3.5-4.3,1.6c-1.1,1.1-1.6,2.4-1.6,4.1s.5,3.1,1.6,4.2c1,1.1,2.5,1.7,4.3,1.7s1.9,0,2.7-.2c.8-.2,1.6-.3,2.4-.5.8-.2,1.6-.3,2.5-.3,1.5,0,2.6.5,3.3,1.5.7,1,1.1,2.2,1.1,3.6s-.5,2.6-1.6,3.5c-1.1.9-2.4,1.5-4.2,1.9-1.7.4-3.6.6-5.6.6Z"/>
+          <path d="M253,66.5c-2,0-3.6-.8-4.9-2.3-1.2-1.5-1.9-3.6-1.9-6.3v-9.8c0-1.2.3-2.2,1.1-2.9.8-.7,1.8-1,3.1-1s2.3.3,3,1c.8.7,1.2,1.7,1.2,2.9v8.9c0,2.1.8,3.2,2.5,3.2s1.4-.3,1.7-.9c.3-.6.4-1.4.4-2.4v-8.8c0-1.1.4-2,1.2-2.8.8-.8,1.8-1.1,3-1.1s2.3.4,3,1.1c.7.8,1,1.7,1,2.8v14c0,1.4-.3,2.4-.9,3.3-.6.8-1.6,1.2-3,1.2s-2.4-.4-3.1-1.2c-.8-.8-1.1-1.9-1.1-3.3v-.7h-.8c0,1.6-.5,2.9-1.5,3.8-1,.9-2.3,1.4-3.9,1.4Z"/>
+          <path d="M284.6,66.5c-1.6,0-2.9-.5-3.9-1.4-1-1-1.7-2.2-2-3.7h-.8v9.8c0,1.2-.3,2.2-1,3s-1.6,1.2-3,1.2-2.3-.4-3-1.2c-.7-.8-1-1.8-1-3v-15.9c0-1.4,0-2.6-.1-3.6s-.2-1.9-.3-2.7c-.1-1.2.1-2.2.7-3,.6-.8,1.6-1.3,2.9-1.5,1.7-.2,3,0,3.7.9.7.8,1.1,2.1,1.1,3.9v2h.2c.1-1.1.5-2.2,1-3.2.5-1.1,1.3-1.9,2.2-2.6,1-.7,2.2-1,3.7-1,2.5,0,4.3,1,5.5,3,1.2,2,1.8,4.6,1.8,7.9,0,7.6-2.6,11.4-7.8,11.4ZM277.8,55c0,.5,0,.8.2,1.1.2.5.5.9,1.1,1.2.6.2,1.4.4,2.5.4s2.4-.2,2.9-.6c.5-.4.8-1.1.8-2s-.3-1.6-.8-2c-.5-.4-1.5-.6-2.9-.6s-2,.1-2.5.4-.9.6-1.1,1.2c-.1.3-.2.6-.2,1.1Z"/>
+        </g>
+      </g>
+      <g class="st0">
+        <g class="st0">
+          <path d="M124.7,66.6c-2.8,0-5.3-.6-7.5-1.7-2.2-1.2-4-2.9-5.3-5.1-1.3-2.3-1.9-5.1-1.9-8.4s.6-6.2,1.9-8.6c1.3-2.4,3.1-4.3,5.3-5.6,2.3-1.3,4.8-1.9,7.7-1.9s5.9.5,7.7,1.4c1.8.9,2.7,2.3,2.7,4.2s-.4,2.6-1.1,3.5c-.8.9-1.8,1.4-3.2,1.4s-2.2-.1-3.3-.4c-1.1-.3-2.3-.4-3.7-.4s-3.3.5-4.3,1.6c-1.1,1.1-1.6,2.4-1.6,4.1s.5,3.1,1.6,4.2c1.1,1.1,2.5,1.7,4.3,1.7s1.9,0,2.7-.2c.8-.2,1.6-.3,2.4-.5.8-.2,1.6-.3,2.5-.3,1.5,0,2.6.5,3.3,1.5.7,1,1.1,2.2,1.1,3.6s-.5,2.6-1.6,3.5c-1.1.9-2.4,1.5-4.2,1.9-1.7.4-3.6.6-5.6.6Z"/>
+          <path d="M142,66.5c-1.4,0-2.4-.4-3.1-1.1-.7-.7-1-1.7-1-2.8v-24.7c0-1.2.3-2.2,1-3,.7-.8,1.7-1.2,3.1-1.2s2.2.4,2.9,1.2c.7.8,1,1.8,1,3v24.8c0,1.1-.3,2-1,2.8s-1.6,1.1-2.9,1.1Z"/>
+          <path d="M147.9,55.4c0-2.2.4-4.2,1.3-5.9s2.2-3,3.8-4c1.7-1,3.6-1.4,5.9-1.4s3.4.3,4.8,1c1.4.7,2.6,1.5,3.4,2.6.8,1.1,1.2,2.3,1.2,3.6s-.4,2.3-1.2,2.9-2,.9-3.5.9h-8.9c0,.7.3,1.3.9,1.8.6.5,1.6.7,3,.7s1.4,0,2-.2c.6-.1,1.2-.3,1.9-.4.6-.1,1.4-.2,2.2-.2,1.1,0,2.1.4,2.8,1.2.7.8,1.1,1.9,1.1,3.3s-.9,3-2.6,3.9c-1.7.9-4,1.4-6.8,1.4s-3.8-.4-5.5-1.2c-1.7-.8-3.1-2-4.2-3.6-1.1-1.7-1.6-3.8-1.6-6.4ZM161.7,53.6c.4,0,.6-.2.4-.6-.1-.4-.5-.8-1-1.2-.6-.4-1.4-.6-2.5-.6s-2.2.3-2.8.8c-.6.5-.9,1.1-.9,1.7h6.8Z"/>
+          <path d="M176.8,66.5c-2.1,0-3.7-.6-4.9-1.7-1.2-1.1-1.8-2.7-1.8-4.8s.7-3.5,2-4.5,3.1-1.4,5.2-1.4,2.4,0,3.4.3c1,.2,1.9.4,2.8.7h.1v-.6c0-.7-.2-1.2-.7-1.6-.5-.4-1.1-.6-1.8-.5-.7,0-1.3,0-1.8.1-.5,0-1.1.2-1.9.4-1.4.3-2.5.3-3.5,0-1-.4-1.7-1.2-2-2.3-.3-1.2-.3-2.2.2-3.1.5-.8,1.3-1.5,2.3-1.9.9-.4,1.9-.8,3-1.1,1.1-.3,2.3-.4,3.6-.4,3.7,0,6.5.9,8.2,2.7,1.7,1.8,2.6,4.8,2.6,9.1v6.6c0,1.2-.4,2.1-1.1,2.9-.7.8-1.7,1.2-2.9,1.2s-2.4-.4-3-1.2c-.7-.8-1-1.7-1-2.8v-1h-.9c0,.7-.1,1.5-.4,2.3-.3.8-.8,1.4-1.7,1.9-.8.5-2.2.8-4,.8ZM177.2,57.2c0,.5.2.8.5,1,.4.2,1.1.3,2.3.3s1.8,0,2.3-.3c.4-.2.6-.5.6-1s-.2-.8-.6-1c-.4-.2-1.2-.3-2.3-.3s-2,0-2.3.3c-.4.2-.5.5-.5,1Z"/>
+          <path d="M198.2,66.5c-1.3,0-2.4-.4-3.1-1.2s-1.1-1.7-1.1-2.9v-14c0-1.2.4-2.2,1.1-3s1.8-1.2,3.1-1.2,2.4.4,3.1,1.2,1.1,1.8,1.1,3v.9h.8c.1-1.5.7-2.7,1.7-3.7,1-1,2.2-1.4,3.6-1.4s2.5.4,3.3,1.3c.8.9,1.2,2,1.2,3.4s-.4,2.4-1.2,3.3c-.8.9-1.7,1.3-2.9,1.3s-1.8-.2-2.5-.7c-.7-.5-1.2-1-1.5-1.6-.9-.1-1.6,0-2,.3-.4.3-.6.9-.6,1.8v9.3c0,1.2-.4,2.1-1.1,2.9s-1.7,1.2-3.1,1.2Z"/>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg></div>
+      </div>
+      <button type="button" id="btn-rejouer" class="nb-btn nb-btn--white">Rejouer</button>
+    </div>
+  </section>
+
+  <!-- ============ Overlay rotation forcée (CSS pur) ============ -->
+  <div id="screen-rotate"><p>Tourne ton téléphone</p></div>
+
+  <!-- ============ Fenêtre — Classement (données fictives, Jalon 1) ============ -->
+  <div id="modal-classement" class="modal-overlay" hidden>
+    <div class="modal-card nb-card">
+      <button type="button" id="btn-classement-close" class="modal-close" aria-label="Fermer">✕</button>
+      <h2 class="modal-title">Classement</h2>
+      <ol id="classement-list" class="classement-list"></ol>
+    </div>
+  </div>
+
+  <!-- ============ Fenêtre — Règles ============ -->
+  <div id="modal-regles" class="modal-overlay" hidden>
+    <div class="modal-card nb-card">
+      <button type="button" id="btn-regles-close" class="modal-close" aria-label="Fermer">✕</button>
+      <h2 class="modal-title">Règles</h2>
+      <div class="regles-list">
+        <div class="regles-item">
+          <span class="regles-num">1</span>
+          <p>Garde un doigt sur ton verre, sans le lâcher.</p>
+        </div>
+        <div class="regles-item">
+          <span class="regles-num">2</span>
+          <p>Un 2<sup>e</sup> doigt posé = perdu direct.</p>
+        </div>
+        <div class="regles-item">
+          <span class="regles-num">3</span>
+          <p>Des distractions arrivent : gère-les vite, sans lâcher trop longtemps.</p>
+        </div>
+        <div class="regles-item">
+          <span class="regles-num">4</span>
+          <p>Tiens le plus longtemps possible avant de craquer.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Élément Clearky unique, déplacé en JS entre accueil et jeu -->
+<template id="tpl-verre">
+  <div id="verre-anim">
+    <div id="verre-scale">
+      <svg id="Clearky" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 100.2 101.8">
+  <defs>
+    <style>
+      /* Classes scopées à #Clearky : ce SVG est déplacé en JS entre les écrans
+         (voir moveVerreTo) et son <style> reste actif tant qu'il est dans le
+         DOM. Sans ce scope, ses classes st0-st4 (dont .st0{fill:none}) entrent
+         en collision avec les st0-st6 des logos inlinés (#Calque_2_accueil,
+         #Calque_2) et écrasaient leur remplissage — c'était le bug du texte
+         du logo affiché en contour plutôt qu'en plein. */
+      #Clearky .st0 {
+        fill: none;
+      }
+
+      #Clearky .st0, #Clearky .st1, #Clearky .st2, #Clearky .st3, #Clearky .st4 {
+        stroke: var(--ink);
+        stroke-miterlimit: 10;
+      }
+
+      #Clearky .st0, #Clearky .st2, #Clearky .st3, #Clearky .st4 {
+        stroke-width: 1.3px;
+      }
+
+      #Clearky .st1 {
+        stroke-width: .9px;
+      }
+
+      #Clearky .st5, #Clearky .st4 {
+        fill: var(--white);
+      }
+
+      #Clearky .st3 {
+        fill: var(--blue);
+      }
+    </style>
+  </defs>
+  <g id="jambes">
+    <g id="Jambe_droite">
+      <path class="st5" d="M81.4,83.5c-.8-2.7-3.1-5-5.8-5.9-2.9-1-6.3-.4-9,1.5h0l-3.3-8.2-7.8,2.3,4.4,11.8h0c-2,1-3.2,3.1-3.8,5.4-.7,2.9.6,7.3,3.8,9.7,4.9,3.7,12.7-2,14-3,1.1-.8,9.2-6.9,7.3-13.5h0s.2,0,.2-.1Z"/>
+      <line class="st0" x1="55.5" y1="73.2" x2="60.1" y2="85.5"/>
+      <line class="st0" x1="63.3" y1="70.8" x2="66.6" y2="79.1"/>
+      <path class="st0" d="M64.4,81.1c2.9-3.4,7.3-4.8,11.1-3.5,2.7.9,5,3.2,5.8,5.9,1.9,6.7-6.3,12.8-7.3,13.5-1.3,1-9.1,6.6-14,3-3.2-2.4-4.4-6.8-3.8-9.7.5-2.3,1.8-4.3,3.8-5.4"/>
+      <path class="st0" d="M61.3,95.9c.6-1.8,1.8-4.7,4.3-7.5,3.9-4.2,8.5-5.6,10.4-6.1"/>
+    </g>
+    <g id="jambe_gauche">
+      <path class="st5" d="M51.9,73.3s-1.9,17.3-17.1,12.6c0,.3,0,2.7-2.1,5-1.8,1.9-4.7,2-6.7,1.3-4.9-1.7-5.8-10.5-3-16,2-3.8,5.2-4.8,8.2-3.5,2.5,1.2,3,4.6,3.1,5.1,10.3,2.1,11.6-5.5,11.6-5.5l6,.9h0Z"/>
+      <path class="st0" d="M45.9,72.4s-1.6,9.5-15.6,4.3"/>
+      <path class="st0" d="M51.9,73.3s-2.3,21.6-23.1,9.9"/>
+      <path class="st0" d="M34.3,77.9c0-.5-.5-3.9-3.1-5.1-3-1.4-6.2-.4-8.2,3.5-2.8,5.5-1.9,14.2,3,16,2,.7,4.9.6,6.7-1.3,2.2-2.4,2.1-4.8,2.1-5"/>
+    </g>
+  </g>
+  <g id="BRAS">
+    <g id="bras_droite">
+      <path class="st5" d="M99,32.2c-1.4,5.4-8.9,7.3-8.9,7.3,0,0,.8,5.2-.9,8.2-1.8,3-5,5.7-7,6.1-2,.4-5.2,2-8.8-1.6,0,0-1.7-1.2-2.3-2.4l1.7-8.5s3.6,5.1,8.1,5c4.6,0,2.4-8.4,2.4-8.4,0,0-4.1-2-3.9-5.6,0,0-.4-4.9,2.1-6.3h0s0,0,.3-.1h0v-.4c-.2-1.2-.3-4.6,2.7-6.3,0,0,2.9-1.4,3.9,1.1,0,0-.4.4-.8,1.1,0-.1.6-.7,1.2-1.1.9-.6,2.2-1,3.6,0,0,0,.6.4.8,1.1,0,.4.5.7.9.5,1.1-.5,2.6-.6,3.9,1.3,0,0,2.6,3.8,1.1,9.1h0q0,0,0-.1Z"/>
+      <path class="st0" d="M72.7,41.3s3.6,5.1,8.1,5,2.4-8.4,2.4-8.4c0,0-4.1-2-3.9-5.6,0,0-.4-4.9,2.1-6.3,0,0,.9-.5,1.9-.6.4,0,.5,0,1.1.2,2.2,1.1.4,5.6.4,5.6,0,0,4.1-1.9,5.1,4.1"/>
+      <path class="st0" d="M90.3,27.4s-2.8.8-4.1-1.3,1.9-5.9,1.9-5.9c-.9-2.6-3.9-1.1-3.9-1.1-3.6,2.1-2.6,6.8-2.6,6.8"/>
+      <path class="st0" d="M96.4,28.4s-8.1,5.1-5.8-2.1c.6-1.8,2.2-3.7,2.2-3.7,1-1.4-.5-2.4-.5-2.4-2.5-1.8-4.9,1.1-4.9,1.1"/>
+      <path class="st0" d="M92.7,22.6c.3-.3,3.1-2.6,5.2.5,0,0,2.6,3.8,1.1,9.1-1.4,5.3-8.9,7.3-8.9,7.3,0,0,.8,5.2-.9,8.2s-5,5.7-7,6.1-5.2,2-8.8-1.6c0,0-2.6-1.6-3.2-2.8"/>
+    </g>
+    <path id="bras_gauche" class="st4" d="M27.9,37.6s-6.7-5.2-14-.6c0,0-4.9,1.6-5,10.7-5.1,0-6.4,2.6-6.4,2.6-2.3,3.5-2.6,10.1-.3,10.3,2.9.3,3.6-2,3.6-2,0,0-.4,5,3.4,5.6,3.2.5,3.5-2.4,3.5-2.4,0,0,.4,3.2,5.3,2.9,2.6-.2,4.4-4.8,2.7-6.1-.6-.4-3.2.7-4.1.9-1.5.4-.6-5-.2-4.6.7.8,1.5,3.9,3.2,2.9,2.3-1.2.9-5.3,1-5-1.6-4.4-5.5-3.4-5.5-3.4-1.3-5.5,3.7-8,3.7-8,6.4-2.8,11.5,4,11.5,4"/>
+  </g>
+  <path id="Body_bleu" class="st3" d="M79.7,5.6l-12.4,62.8c-15.2,11.1-30.5,0-30.5,0L18.5,5.7c4.3.8,16.4,1.3,30.5,1.3s26.6-.6,30.7-1.4Z"/>
+  <g id="Yeux">
+    <g id="Blanc_yeux">
+      <path id="blanc_oeil_droite" class="st4" d="M72.1,21.3c0,5.5-3.2,9.9-7.2,9.9s-4.5-1.6-5.8-4.1h.5c2.1,0,3.9-2.5,3.9-5.7s-1.7-5.7-3.9-5.7-.5,0-.7.1c1.3-2.7,3.5-4.6,6-4.6,3.9,0,7.2,4.4,7.2,9.9h0v.2Z"/>
+      <path id="Blanch_oeil_gauche" class="st4" d="M59.3,21.3c0,1.6-.3,3.1-.8,4.4,0,.3-.3.7-.4,1-1.3,2.7-3.5,4.5-6,4.5s-4.5-1.7-5.8-4.2c.3.1.6.2.9.2,2.1,0,3.9-2.5,3.9-5.7s-1.7-5.7-3.9-5.7-.8.1-1.2.3c1.3-2.8,3.5-4.7,6.1-4.7s4.9,1.9,6.1,4.8c0,.2.2.4.3.7.5,1.3.8,2.9.8,4.5h0s0-.1,0-.1Z"/>
+    </g>
+    <g id="Pupilles">
+      <path id="pupille_gauche" class="st1" d="M50.7,21.5c0,3.1-1.7,5.7-3.9,5.7h0c-.6,0-1-.4-1.3-.9-.6-1.5-1-3.2-1-5s.3-3.2.8-4.5c.2-.5.6-.9,1.2-.9h.3c2.1,0,3.9,2.6,3.9,5.7h0Z"/>
+      <path id="pupille_droite" class="st2" d="M63.5,21.5c0,3.1-1.7,5.7-3.9,5.7s-.3,0-.5,0c-.2-.4-.4-.9-.6-1.4.5-1.3.8-2.9.8-4.5s-.3-3.1-.8-4.5c0-.3.2-.6.4-.9.2,0,.5-.1.7-.1,2.1,0,3.9,2.6,3.9,5.7h0Z"/>
+    </g>
+  </g>
+  <path id="Couvercle" d="M53.9,0c7.7,0,15.7,0,23.3.9,1.1.1,3.8.4,4.6.9.7.5.7,2.2.6,3-.2,1.5-2.3,1.6-3.6,1.8-3.9.6-8,.6-11.9.8-12.6.5-25.3.5-37.9,0-3.1-.2-6.3-.2-9.4-.7-.9,0-2.1-.2-2.9-.7-.5-.3-.7-.8-.7-1.3v-1.4c0-.5.2-1,.6-1.2.9-.6,2.4-.7,3.4-.9C27.9,0,36.4.2,44.5,0,44.5,0,53.9,0,53.9,0Z"/>
+</svg>
+    </div>
+  </div>
+</template>
+
+<script>
+(function(){
+  'use strict';
+
+  /* ============================================================================
+     COPY — tous les textes affichés, centralisés (§17 du brief). Sam peut
+     réécrire ici sans toucher au reste du code.
+     ============================================================================ */
+  var COPY = {
+    interrupted: 'Partie interrompue. On reprend depuis le début.',
+    causes: {
+      deux_doigts: 'Deux mains ? Dans la vraie vie t’as ton verre dans une main et ton téléphone dans l’autre.',
+      leurre: 'Juste une alerte batterie. Tu as lâché ton verre pour ça.',
+      jauge: 'Trois secondes d’inattention. C’est tout ce qu’il faut.',
+      action_ratee: 'Tu as gardé ton verre. T’as raté ce qu’il fallait faire à côté.', // fallback générique, voir COPY.distractions[id].rate pour un message dédié par distraction
+      cap: 'Le soleil se lève. Match nul.'
+    },
+    distractions: {
+      // nom/sousTitre : utilisés par l'écran d'appel iPhone (voir .lp-call),
+      // pas par les cartes classiques. rate : message de révélation spécifique
+      // si cette distraction précise fait perdre (sinon fallback sur
+      // causes.action_ratee, voir runRevelation()).
+      pote_appelle:   {
+        texte: 'Ton pote t’appelle', label: 'Répondre',
+        nom: 'Lucas', sousTitre: 'mobile',
+        rate: 'T’as laissé sonner. Le temps de décrocher, t’as lâché ton verre.'
+      },
+      commande_prete: {
+        // nom/sousTitre : utilisés par la fiche de comptoir (voir .lp-order),
+        // pas par les cartes classiques — même logique que pote_appelle plus haut.
+        texte: 'Commande prête', label: 'Récupérer', sousTitre: 'à retirer au comptoir',
+        rate: 'Tu étais trop concentré sur ton burger, t’as pas fait attention à ton verre.'
+      },
+      notif_batterie: { texte: 'Batterie faible — 12 %' }
+    }
+  };
+
+  // Couleur de l'inondation (#flood), synchronisée sur les mêmes seuils que
+  // la barre de vie (vie-bar-fill par défaut / .is-mid / .is-low), y compris
+  // le vert par défaut — chaque zone a son triplet [r,g,b] (canaux séparés,
+  // cf. @property --flood-r/g/b), appliqué via setFloodZone() ci-dessous.
+  var FLOOD_SAFE = [34, 197, 94];  // = #22C55E, couleur par défaut de .vie-bar-fill
+  var FLOOD_MID  = [245, 158, 11]; // même orange que .vie-bar-fill.is-mid (#F59E0B)
+  var FLOOD_LOW  = [239, 68, 68];  // = --alerte-rgb, .vie-bar-fill.is-low
+
+  function setFloodZone(zone){
+    var rgb = zone === 'low' ? FLOOD_LOW : (zone === 'mid' ? FLOOD_MID : FLOOD_SAFE);
+    var style = document.documentElement.style;
+    style.setProperty('--flood-r', rgb[0]);
+    style.setProperty('--flood-g', rgb[1]);
+    style.setProperty('--flood-b', rgb[2]);
+  }
+
+  /* ============================================================================
+     CONFIG — toutes les valeurs de la courbe de difficulté. Éditable sans
+     toucher au reste du code (§6 du brief). L'équilibrage se fait ici.
+     ============================================================================ */
+  var CONFIG = {
+    CAP_MS: 45000,
+    START_GRACE_MS: 350, // grâce en tout début de partie (voir loop())
+    PHASES: [
+      { id:'confiance',  from:0,     gaugeFillMs:1200, cardIntervalMs:4200, bousculadeIntervalMs:99999 },
+      { id:'montee',     from:8000,  gaugeFillMs:950,  cardIntervalMs:3000, bousculadeIntervalMs:7000  },
+      { id:'chaos',      from:18000, gaugeFillMs:700,  cardIntervalMs:2000, bousculadeIntervalMs:4500  },
+      { id:'impossible', from:30000, gaugeFillMs:500,  cardIntervalMs:1300, bousculadeIntervalMs:3000  }
+    ],
+    GAUGE_DRAIN_MULTIPLIER: 2,
+    BOUSCULADE_PX: [80, 150]
+  };
+
+  // DISTRACTIONS — structure de données du §7. Ajouter une distraction = ajouter une ligne.
+  var DISTRACTIONS = [
+    { id:'pote_appelle',   type:'A', phaseMin:'confiance', fenetreMs:2000, poids:3 },
+    { id:'commande_prete', type:'A', phaseMin:'confiance', fenetreMs:1800, poids:3 },
+    { id:'notif_batterie', type:'B', phaseMin:'confiance', fenetreMs:2200, poids:2 },
+    { id:'bousculade',     type:'C', phaseMin:'montee' }
+  ];
+
+  var PERCENTILES_FALLBACK = {
+    mean_ms: 19000,
+    buckets_ms: [
+      { max_ms:5000,  count:5  }, { max_ms:10000, count:12 }, { max_ms:15000, count:20 },
+      { max_ms:20000, count:25 }, { max_ms:25000, count:18 }, { max_ms:30000, count:10 },
+      { max_ms:35000, count:6  }, { max_ms:40000, count:3  }, { max_ms:45000, count:1  }
+    ]
+  };
+  var PERCENTILES = PERCENTILES_FALLBACK;
+  // Chargement best-effort : si ça échoue (hors-ligne, file://), le fallback ci-dessus prend le relai.
+  fetch('lp-percentiles.json').then(function(r){ return r.ok ? r.json() : null; })
+    .then(function(d){ if (d && d.buckets_ms) PERCENTILES = d; })
+    .catch(function(){ /* fallback déjà en place */ });
+
+  /* ============================================================================
+     ÉTAT
+     ============================================================================ */
+  var STATE = { STROBE:'strobe', ACCUEIL:'accueil', PRET:'pret', JEU:'jeu', INTERRUPTED:'interrupted', REVELATION:'revelation' };
+
+  var game = {
+    state: null,
+    elapsedMs: 0,
+    risk: 0,
+    holding: false,
+    holdingPointerId: null,
+    lastX: 0, lastY: 0,
+    activePointers: new Set(),
+    cardTimer: 0,
+    bousculadeTimer: 0,
+    activeCard: null,     // { def, remainingMs, el }
+    causeDistraction: null,
+    lastFrameTime: 0,
+    vieZone: 'safe'       // 'safe' | 'mid' | 'low' — pour ne vibrer qu'au franchissement d'un seuil, pas à chaque frame dedans
+  };
+
+  var reducedFx = false;
+
+  /* ============================================================================
+     RÉFÉRENCES DOM
+     ============================================================================ */
+  var $ = function(id){ return document.getElementById(id); };
+  var elScreens = {
+    strobe: $('screen-strobe'),
+    accueil: $('screen-accueil'),
+    pret: $('screen-pret'),
+    jeu: $('screen-jeu'),
+    interrupted: $('screen-interrupted'),
+    revelation: $('screen-revelation')
+  };
+  var elAccueilEntree = document.querySelectorAll('.accueil-brand, .accueil-title, .accueil-hint');
+  var elAccueilVerreZone = $('accueil-verre-zone');
+  var elPretVerreZone = $('pret-verre-zone');
+  var elJeuVerreZone = $('jeu-verre-zone');
+  var elJeuHud = $('jeu-hud');
+  var elTimer = $('timer');
+  var elVieBarFill = $('vie-bar-fill');
+  var elFlood = $('flood');
+  var elCardZone = $('card-zone');
+  var elInterruptedText = $('interrupted-text');
+  var elBtnRejouer = $('btn-rejouer');
+  var elModalClassement = $('modal-classement');
+  var elClassementList = $('classement-list');
+  var elModalRegles = $('modal-regles');
+
+  // L'élément Clearky est unique : on le déplace entre accueil et jeu (évite les id dupliqués du SVG inliné)
+  var verreFrag = $('tpl-verre').content;
+  var elVerreAnim = verreFrag.getElementById ? verreFrag.getElementById('verre-anim') : verreFrag.querySelector('#verre-anim');
+  var elVerreScale = elVerreAnim.querySelector('#verre-scale');
+  var elPupilles = elVerreScale.querySelector('#Pupilles');
+
+  function moveVerreTo(container){
+    container.appendChild(elVerreAnim);
+  }
+
+  /* ============================================================================
+     HELPERS
+     ============================================================================ */
+  function showScreen(name){
+    Object.keys(elScreens).forEach(function(k){
+      var active = (k === name);
+      elScreens[k].classList.toggle('is-active', active);
+      // Les écrans ne passent plus par display:none (nécessaire pour le
+      // fondu, voir .screen plus haut) : sans ça, un lecteur d'écran
+      // continuerait de voir le contenu des écrans inactifs.
+      elScreens[k].setAttribute('aria-hidden', active ? 'false' : 'true');
+    });
+  }
+
+  // La meta theme-color était fixée en dur sur blanc alors qu'une bonne
+  // partie du jeu (temps 2/3/4 de la révélation) est en fond bleu plein
+  // écran — la barre de statut du téléphone ne suivait pas visuellement.
+  var elMetaTheme = document.querySelector('meta[name="theme-color"]');
+  function setThemeColor(hex){
+    if (elMetaTheme) elMetaTheme.setAttribute('content', hex);
+  }
+
+  function fmtScoreFr(ms){
+    return (ms / 1000).toFixed(1).replace('.', ',');
+  }
+  function fmtPercentFr(ms){
+    return (ms / 18000000 * 100).toFixed(2).replace('.', ',');
+  }
+
+  // Petit compteur qui s'incrémente de 0 à `to` (ease-out cubique) plutôt que
+  // d'afficher le chiffre déjà résolu — utilisé pour "Top X %" au temps 3.
+  function animateCount(el, to, ms, render){
+    if (ms <= 0){ el.textContent = render(to); return; }
+    var start = performance.now();
+    function step(now){
+      var t = Math.min(1, (now - start) / ms);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = render(Math.round(to * eased));
+      if (t < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  }
+
+  /* ============================================================================
+     FENÊTRE — CLASSEMENT. Données fictives pour l'instant (Jalon 1, pas de
+     backend) : top 10 trié par temps de hold décroissant. À remplacer par de
+     vraies données au Jalon 2 (Firebase, cf. README-game.md).
+     ============================================================================ */
+  var CLASSEMENT_FICTIF = [
+    { nom: 'Léa',   ms: 41200 },
+    { nom: 'Noah',  ms: 38700 },
+    { nom: 'Inès',  ms: 35950 },
+    { nom: 'Malik', ms: 33100 },
+    { nom: 'Chloé', ms: 30800 },
+    { nom: 'Yanis', ms: 28450 },
+    { nom: 'Sofia', ms: 26200 },
+    { nom: 'Théo',  ms: 24100 },
+    { nom: 'Emma',  ms: 21900 },
+    { nom: 'Rayan', ms: 19700 }
+  ];
+
+  function renderClassement(){
+    elClassementList.innerHTML = CLASSEMENT_FICTIF.map(function(entry, i){
+      return '<li><span class="classement-rank">' + (i + 1) + '</span>' +
+        '<span class="classement-name">' + entry.nom + '</span>' +
+        '<span class="classement-time">' + fmtScoreFr(entry.ms) + ' s</span></li>';
+    }).join('');
+  }
+
+  // Fondu + léger scale-in/out (voir .modal-overlay/.modal-card) partagé par
+  // les deux fenêtres. hidden est retiré immédiatement à l'ouverture (sinon
+  // rien à animer) puis reposé après la durée de la transition CSS à la
+  // fermeture, pour repasser l'élément hors de l'arbre interactif une fois
+  // invisible — MODAL_CLOSE_MS doit rester synchro avec la transition CSS.
+  var MODAL_CLOSE_MS = 200;
+  function openModal(el){
+    el.hidden = false;
+    void el.offsetWidth; // force le reflow : sans ça, hidden=false + la classe dans le même tick ne laisserait rien à transitionner
+    el.classList.add('is-open');
+  }
+  function closeModal(el){
+    el.classList.remove('is-open');
+    setTimeout(function(){ el.hidden = true; }, reducedFx ? 0 : MODAL_CLOSE_MS);
+  }
+
+  function openClassement(){
+    renderClassement();
+    openModal(elModalClassement);
+  }
+  function closeClassement(){
+    closeModal(elModalClassement);
+  }
+
+  $('btn-classement-close').addEventListener('pointerup', closeClassement);
+  elModalClassement.addEventListener('pointerup', function(e){
+    if (e.target === elModalClassement) closeClassement(); // clic sur le fond
+  });
+
+  function openRegles(){
+    openModal(elModalRegles);
+  }
+  function closeRegles(){
+    closeModal(elModalRegles);
+  }
+
+  $('btn-regles-close').addEventListener('pointerup', closeRegles);
+  elModalRegles.addEventListener('pointerup', function(e){
+    if (e.target === elModalRegles) closeRegles(); // clic sur le fond
+  });
+
+  function currentPhase(){
+    var p = CONFIG.PHASES[0];
+    for (var i = 0; i < CONFIG.PHASES.length; i++){
+      if (game.elapsedMs >= CONFIG.PHASES[i].from) p = CONFIG.PHASES[i];
+    }
+    return p;
+  }
+  function phaseIndex(id){
+    for (var i = 0; i < CONFIG.PHASES.length; i++) if (CONFIG.PHASES[i].id === id) return i;
+    return 0;
+  }
+  function phaseUnlocked(phaseMin){
+    return phaseIndex(phaseMin) <= phaseIndex(currentPhase().id);
+  }
+
+  function weightedPick(pool){
+    var total = pool.reduce(function(s, d){ return s + (d.poids || 1); }, 0);
+    var r = Math.random() * total;
+    for (var i = 0; i < pool.length; i++){
+      r -= (pool[i].poids || 1);
+      if (r <= 0) return pool[i];
+    }
+    return pool[pool.length - 1];
+  }
+
+  function vibrate(ms){
+    try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){ /* silencieux sur iOS */ }
+  }
+
+  /* ============================================================================
+     ÉCRAN 0 — STROBOSCOPE
+     ============================================================================ */
+  function applyReducedFx(on){
+    reducedFx = on;
+    document.body.classList.toggle('reduced-fx', on);
+  }
+
+  function boot(){
+    var systemReduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var ack = localStorage.getItem('lp_strobe_ack');
+    var savedReduced = localStorage.getItem('lp_reduced_fx') === '1';
+    applyReducedFx(systemReduced || savedReduced);
+
+    if (!ack){
+      game.state = STATE.STROBE;
+      showScreen('strobe');
+    } else {
+      goToAccueil();
+    }
+  }
+
+  $('btn-strobe-normal').addEventListener('pointerup', function(){ ackStrobe(false); });
+  $('btn-strobe-reduced').addEventListener('pointerup', function(){ ackStrobe(true); });
+  function ackStrobe(reduced){
+    localStorage.setItem('lp_strobe_ack', '1');
+    if (reduced){ localStorage.setItem('lp_reduced_fx', '1'); applyReducedFx(true); }
+    goToAccueil();
+  }
+
+  /* ============================================================================
+     ÉCRAN 1 — ACCUEIL
+     ============================================================================ */
+  function goToAccueil(){
+    game.state = STATE.ACCUEIL;
+    // Clearky (le verre) n'est plus placé ici : il reste inerte dans son
+    // <template> (donc son <style> ne s'applique nulle part, voir la remarque
+    // sur #Clearky plus haut) tant qu'on n'a pas démarré la partie. Il
+    // n'apparaît qu'au moment de startGame(), déplacé dans l'écran jeu.
+    elVerreScale.classList.remove('is-held', 'is-danger');
+    setThemeColor('#FFFFFF');
+    showScreen('accueil');
+
+    // Rejoue l'entrée du logo/titre/accroche (reflow forcé, cf. .entree plus haut).
+    elAccueilEntree.forEach(function(el){ el.classList.remove('entree'); });
+    elAccueilEntree.forEach(function(el){ void el.offsetWidth; el.classList.add('entree'); });
+  }
+
+  // Le tap direct sur la zone du verre depuis l'accueil et le bouton « Commencer »
+  // mènent tous les deux au même écran d'attente : un seul parcours de lancement,
+  // toujours avec l'instruction affichée avant de démarrer la partie.
+  elAccueilVerreZone.addEventListener('pointerup', function(){
+    if (game.state !== STATE.ACCUEIL) return;
+    goToPret();
+  });
+  $('btn-commencer').addEventListener('pointerup', function(){
+    if (game.state !== STATE.ACCUEIL) return;
+    goToPret();
+  });
+
+  $('btn-classement').addEventListener('pointerup', openClassement);
+  $('btn-regles').addEventListener('pointerup', openRegles);
+
+  /* ============================================================================
+     ÉCRAN 1.5 — ATTENTE
+     ============================================================================ */
+  function goToPret(){
+    game.state = STATE.PRET;
+    moveVerreTo(elPretVerreZone);
+    elVerreScale.classList.remove('is-held', 'is-danger');
+    setThemeColor('#FFFFFF');
+    showScreen('pret');
+  }
+
+  // C'est ici, et seulement ici, que le doigt posé sur le verre déclenche
+  // vraiment startGame() (pointerdown : c'est le même geste que le hold lui-même,
+  // le pointerId doit être capturé dès cette frame-là, cf. remarque plus bas).
+  elPretVerreZone.addEventListener('pointerdown', function(e){
+    if (game.state !== STATE.PRET) return;
+    startGame(e);
+  });
+
+  /* ============================================================================
+     ÉCRAN 2 — JEU
+     ============================================================================ */
+  function startGame(e){
+    game.state = STATE.JEU;
+    game.elapsedMs = 0;
+    game.risk = 0;
+    game.holding = true;
+    game.holdingPointerId = e.pointerId;
+    game.activePointers.clear();
+    game.activePointers.add(e.pointerId);
+    game.lastX = e.clientX; game.lastY = e.clientY;
+    game.cardTimer = CONFIG.PHASES[0].cardIntervalMs;
+    game.bousculadeTimer = CONFIG.PHASES[1].bousculadeIntervalMs;
+    game.activeCard = null;
+    game.causeDistraction = null;
+    game.vieZone = 'safe';
+    game.lastFrameTime = performance.now();
+    elCardZone.innerHTML = '';
+
+    moveVerreTo(elJeuVerreZone);
+    elVerreScale.classList.add('is-held');
+    elVerreScale.classList.remove('is-danger');
+    elTimer.textContent = '0.0';
+    document.documentElement.style.setProperty('--risk', '0');
+    setFloodZone('safe');
+    elVieBarFill.style.width = '100%';
+    elVieBarFill.classList.remove('is-mid', 'is-low');
+
+    // Rejoue l'entrée du HUD à chaque partie (reflow forcé, même technique
+    // que triggerBousculade() plus bas, sinon la classe déjà présente ne
+    // redéclencherait pas l'animation).
+    elJeuHud.classList.remove('hud-enter');
+    void elJeuHud.offsetWidth;
+    elJeuHud.classList.add('hud-enter');
+
+    try { elVerreAnim.setPointerCapture(e.pointerId); } catch(err){ /* ignore */ }
+
+    showScreen('jeu');
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('pointerdown', function(e){
+    if (game.state !== STATE.JEU) return;
+
+    game.activePointers.add(e.pointerId);
+    if (game.activePointers.size > 1){
+      endGame('deux_doigts', null);
+      return;
+    }
+
+    // Tap sur une carte active (type A ou B) ?
+    if (game.activeCard && game.activeCard.el.contains(e.target)){
+      handleCardTap(game.activeCard);
+      return;
+    }
+
+    // Sinon : c'est une reprise du verre
+    game.holding = true;
+    game.holdingPointerId = e.pointerId;
+    game.lastX = e.clientX; game.lastY = e.clientY;
+    try { elVerreAnim.setPointerCapture(e.pointerId); } catch(err){ /* ignore */ }
+  });
+
+  window.addEventListener('pointermove', function(e){
+    if (game.state !== STATE.JEU) return;
+    if (e.pointerId === game.holdingPointerId){
+      game.lastX = e.clientX; game.lastY = e.clientY;
+    }
+  });
+
+  function releasePointer(e){
+    game.activePointers.delete(e.pointerId);
+    if (e.pointerId === game.holdingPointerId){
+      game.holding = false;
+      game.holdingPointerId = null;
+    }
+  }
+  window.addEventListener('pointerup', function(e){ if (game.state === STATE.JEU) releasePointer(e); });
+  // pointercancel traité exactement comme pointerup (appel entrant, notification…) — §13.2
+  window.addEventListener('pointercancel', function(e){ if (game.state === STATE.JEU) releasePointer(e); });
+
+  function isPointerOnVerre(){
+    if (!game.holding) return false;
+    var r = elVerreAnim.getBoundingClientRect();
+    var pad = 14; // marge de tolérance
+    return game.lastX >= r.left - pad && game.lastX <= r.right + pad &&
+           game.lastY >= r.top - pad && game.lastY <= r.bottom + pad;
+  }
+
+  function loop(now){
+    if (game.state !== STATE.JEU) return;
+    var dt = Math.min(now - game.lastFrameTime, 80); // clamp anti-rattrapage si l'onglet a été throttlé
+    game.lastFrameTime = now;
+    game.elapsedMs += dt;
+
+    if (game.elapsedMs >= CONFIG.CAP_MS){
+      endGame('cap', null);
+      return;
+    }
+
+    var phase = currentPhase();
+    var onVerre = isPointerOnVerre();
+
+    // Jauge de risque. Courte grâce au tout début : le verre est déjà à sa
+    // position finale sur l'écran d'attente, mais on garde une marge pour le
+    // premier changement d'écran / la 1ère frame après startGame().
+    if (onVerre){
+      game.risk -= (dt / phase.gaugeFillMs) * CONFIG.GAUGE_DRAIN_MULTIPLIER;
+    } else if (game.elapsedMs > CONFIG.START_GRACE_MS){
+      game.risk += dt / phase.gaugeFillMs;
+    }
+    game.risk = Math.max(0, Math.min(1, game.risk));
+    document.documentElement.style.setProperty('--risk', game.risk.toFixed(3));
+
+    // Barre de vie : vie = 1 - risque. Verte par défaut, orange dès le 1er
+    // tiers de vie perdu (vie <= 2/3), rouge sur le dernier tiers (vie <= 1/3).
+    // Le fondu entre couleurs vient de la transition CSS sur .vie-bar-fill.
+    var vie = 1 - game.risk;
+    var newVieZone = vie <= (1 / 3) ? 'low' : (vie <= (2 / 3) ? 'mid' : 'safe');
+    elVieBarFill.style.width = (vie * 100) + '%';
+    elVieBarFill.classList.toggle('is-mid', newVieZone === 'mid');
+    elVieBarFill.classList.toggle('is-low', newVieZone === 'low');
+
+    // Flood + vibration seulement au franchissement d'un seuil (pas à chaque
+    // frame passée dedans) : setFloodZone() ne fait qu'écrire de nouvelles
+    // valeurs cibles, le fondu lui-même vient de la transition CSS sur
+    // --flood-r/g/b (cf. :root) — inutile de la rappeler à chaque frame.
+    if (newVieZone !== game.vieZone){
+      setFloodZone(newVieZone);
+      if (newVieZone === 'mid') vibrate(12);
+      else if (newVieZone === 'low') vibrate([15, 40, 15]);
+      game.vieZone = newVieZone;
+    }
+
+    elVerreScale.classList.toggle('is-held', onVerre);
+    elVerreScale.classList.toggle('is-danger', !onVerre);
+    updatePupilLook();
+
+    if (game.risk >= 1){
+      endGame('jauge', null);
+      return;
+    }
+
+    // Distractions type A / B (cartes)
+    if (!game.activeCard){
+      game.cardTimer -= dt;
+      if (game.cardTimer <= 0) spawnCard(phase);
+    } else {
+      game.activeCard.remainingMs -= dt;
+      var frac = game.activeCard.remainingMs / game.activeCard.def.fenetreMs;
+      game.activeCard.el.classList.toggle('is-urgent', frac < 0.4);
+      if (game.activeCard.remainingMs <= 0){
+        if (game.activeCard.def.type === 'A'){
+          // Gel bref + flash rouge sur la carte ratée avant de couper vers la
+          // révélation, pour que la cause de la perte soit lisible même en un
+          // clin d'œil, plutôt qu'un cut instantané. requestAnimationFrame
+          // n'est volontairement pas rappelé ici : la partie se fige (chrono,
+          // verre) pendant ce court instant, effet freeze-frame assumé.
+          var missedId = game.activeCard.def.id;
+          game.activeCard.el.classList.add('is-missed');
+          setTimeout(function(){ endGame('action_ratee', missedId); }, reducedFx ? 20 : 120);
+          return;
+        }
+        removeCard(); // type B ignoré : rien ne se passe
+      }
+    }
+
+    // Distraction type C (bousculade du verre)
+    game.bousculadeTimer -= dt;
+    if (game.bousculadeTimer <= 0 && phaseUnlocked('montee')){
+      triggerBousculade();
+      game.bousculadeTimer = phase.bousculadeIntervalMs * (0.75 + Math.random() * 0.5);
+    }
+
+    elTimer.textContent = fmtScoreFr(game.elapsedMs);
+
+    requestAnimationFrame(loop);
+  }
+
+  function updatePupilLook(){
+    if (!game.activeCard){ elPupilles.style.transform = ''; return; }
+    var cardRect = game.activeCard.el.getBoundingClientRect();
+    var verreRect = elVerreAnim.getBoundingClientRect();
+    var vcx = verreRect.left + verreRect.width / 2;
+    var vcy = verreRect.top + verreRect.height / 2;
+    var ccx = cardRect.left + cardRect.width / 2;
+    var ccy = cardRect.top + cardRect.height / 2;
+    var dx = Math.max(-1, Math.min(1, (ccx - vcx) / 160));
+    var dy = Math.max(-1, Math.min(1, (ccy - vcy) / 160));
+    elPupilles.style.transform = 'translate(' + (dx * 2.2).toFixed(2) + 'px,' + (dy * 2.2).toFixed(2) + 'px)';
+  }
+
+  /* ---- Cartes type A / B ---- */
+  function spawnCard(phase){
+    var pool = DISTRACTIONS.filter(function(d){ return (d.type === 'A' || d.type === 'B') && phaseUnlocked(d.phaseMin); });
+    if (!pool.length) return;
+    var def = weightedPick(pool);
+    var copy = COPY.distractions[def.id];
+
+    var el = (def.id === 'pote_appelle') ? buildCallBanner(copy)
+      : (def.id === 'commande_prete') ? buildOrderCard(copy)
+      : buildCard(def, copy);
+
+    elCardZone.innerHTML = '';
+    elCardZone.appendChild(el);
+
+    game.activeCard = { def: def, remainingMs: def.fenetreMs, el: el };
+  }
+
+  function buildCard(def, copy){
+    var el = document.createElement('div');
+    el.className = 'lp-card';
+    var texte = document.createElement('p');
+    texte.className = 'lp-card__texte';
+    texte.textContent = copy.texte;
+    el.appendChild(texte);
+    if (def.type === 'A'){
+      var label = document.createElement('span');
+      label.className = 'lp-card__label';
+      label.textContent = copy.label;
+      el.appendChild(label);
+    }
+    return el;
+  }
+
+  // Écran d'appel entrant façon iPhone (voir .lp-call) : tap n'importe où sur
+  // la bannière = répondre, même logique de détection que .lp-card plus haut
+  // (game.activeCard.el.contains(e.target)) — pas de handleCardTap à dupliquer.
+  function buildCallBanner(copy){
+    var el = document.createElement('div');
+    el.className = 'lp-call';
+
+    var avatar = document.createElement('div');
+    avatar.className = 'lp-call__avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.textContent = copy.nom.charAt(0);
+    el.appendChild(avatar);
+
+    var info = document.createElement('div');
+    info.className = 'lp-call__info';
+    var nom = document.createElement('p');
+    nom.className = 'lp-call__name';
+    nom.textContent = copy.nom;
+    var sub = document.createElement('p');
+    sub.className = 'lp-call__sub';
+    sub.textContent = copy.sousTitre || 'mobile';
+    info.appendChild(nom);
+    info.appendChild(sub);
+    el.appendChild(info);
+
+    var answer = document.createElement('span');
+    answer.className = 'lp-call__answer';
+    answer.setAttribute('aria-hidden', 'true');
+    answer.textContent = '📞';
+    el.appendChild(answer);
+
+    return el;
+  }
+
+  // Fiche « commande prête » (voir .lp-order) : même schéma icône + texte +
+  // action que buildCallBanner() ci-dessus, mais ancrée en bas (#card-zone,
+  // pas de position:fixed) — tap n'importe où = récupérer, même détection
+  // générique que les autres cartes (game.activeCard.el.contains(e.target)).
+  function buildOrderCard(copy){
+    var el = document.createElement('div');
+    el.className = 'lp-order';
+
+    var icon = document.createElement('div');
+    icon.className = 'lp-order__icon';
+    icon.setAttribute('aria-hidden', 'true');
+    icon.textContent = '🧾';
+    el.appendChild(icon);
+
+    var info = document.createElement('div');
+    info.className = 'lp-order__info';
+    var titre = document.createElement('p');
+    titre.className = 'lp-order__title';
+    titre.textContent = copy.texte;
+    var sub = document.createElement('p');
+    sub.className = 'lp-order__sub';
+    sub.textContent = copy.sousTitre || '';
+    info.appendChild(titre);
+    info.appendChild(sub);
+    el.appendChild(info);
+
+    var action = document.createElement('span');
+    action.className = 'lp-order__action';
+    action.textContent = copy.label;
+    el.appendChild(action);
+
+    return el;
+  }
+
+  // Sortie animée (fade + léger retrait vers le haut) plutôt qu'une
+  // suppression instantanée — symétrique de card-in à l'entrée. Le
+  // pointer-events:none de .is-leaving évite qu'un tap pendant les ~150ms de
+  // sortie ne retombe par erreur sur une carte en train de disparaître.
+  var CARD_LEAVE_MS = 150;
+  function removeCard(){
+    if (game.activeCard){
+      var el = game.activeCard.el;
+      el.classList.add('is-leaving');
+      setTimeout(function(){
+        if (el.parentNode) el.parentNode.removeChild(el);
+      }, reducedFx ? 20 : CARD_LEAVE_MS);
+    }
+    game.activeCard = null;
+    elPupilles.style.transform = '';
+  }
+
+  function handleCardTap(card){
+    if (card.def.type === 'A'){
+      vibrate(15);
+      removeCard();
+      var phase = currentPhase();
+      game.cardTimer = phase.cardIntervalMs * (0.75 + Math.random() * 0.5);
+    } else {
+      endGame('leurre', card.def.id);
+    }
+  }
+
+  /* ---- Distraction type C : bousculade ---- */
+  function triggerBousculade(){
+    var min = CONFIG.BOUSCULADE_PX[0], max = CONFIG.BOUSCULADE_PX[1];
+    var dx = (min + Math.random() * (max - min)) * (Math.random() < 0.5 ? -1 : 1);
+    var dy = (min * 0.4 + Math.random() * (max - min) * 0.4) * (Math.random() < 0.5 ? -1 : 1);
+    var rot = (Math.random() * 10 - 5);
+    elVerreAnim.style.setProperty('--vx', dx.toFixed(1) + 'px');
+    elVerreAnim.style.setProperty('--vy', dy.toFixed(1) + 'px');
+    elVerreAnim.style.setProperty('--vr', rot.toFixed(1) + 'deg');
+    elVerreAnim.classList.remove('is-bousculade');
+    void elVerreAnim.offsetWidth; // force le reflow pour rejouer l'animation
+    elVerreAnim.classList.add('is-bousculade');
+
+    // Flash bref de la barre de vie, synchronisé au shake, pour que le
+    // danger se ressente même sans regarder le verre directement.
+    elVieBarFill.classList.remove('is-flash');
+    void elVieBarFill.offsetWidth;
+    elVieBarFill.classList.add('is-flash');
+  }
+
+  /* ============================================================================
+     INTERRUPTION — retour d'onglet / app en arrière-plan pendant une partie
+     ============================================================================ */
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden' && game.state === STATE.JEU){
+      game.state = STATE.INTERRUPTED;
+      elCardZone.innerHTML = '';
+      elInterruptedText.textContent = COPY.interrupted;
+      showScreen('interrupted');
+    } else if (document.visibilityState === 'visible' && game.state === STATE.INTERRUPTED){
+      setTimeout(goToAccueil, 900); // on laisse le message une seconde avant de revenir à l'accueil
+    }
+  });
+
+  /* ============================================================================
+     ÉCRAN 3 — RÉVÉLATION (4 temps, avec rythme et silences)
+     ============================================================================ */
+  function endGame(cause, distractionId){
+    game.state = STATE.REVELATION;
+    game.causeDistraction = distractionId;
+    game.holding = false;
+    game.holdingPointerId = null;
+    elVerreScale.classList.remove('is-held');
+    vibrate(30);
+    elCardZone.innerHTML = '';
+
+    var scoreMs = (cause === 'cap') ? CONFIG.CAP_MS : game.elapsedMs;
+    runRevelation(scoreMs, cause);
+  }
+
+  function computeStats(scoreMs){
+    var buckets = PERCENTILES.buckets_ms;
+    var total = buckets.reduce(function(s, b){ return s + b.count; }, 0);
+    var cum = 0, prevMax = 0;
+    for (var i = 0; i < buckets.length; i++){
+      var b = buckets[i];
+      if (scoreMs >= b.max_ms){
+        cum += b.count;
+      } else {
+        var span = b.max_ms - prevMax;
+        var frac = span > 0 ? Math.max(0, Math.min(1, (scoreMs - prevMax) / span)) : 0;
+        cum += frac * b.count;
+        break;
+      }
+      prevMax = b.max_ms;
+    }
+    var fractionBelow = total ? cum / total : 0.5;
+    var top = Math.max(1, Math.round((1 - fractionBelow) * 100));
+    return { top: top, moyenneSec: Math.round(PERCENTILES.mean_ms / 1000) };
+  }
+
+  // La révélation avance maintenant au tap du joueur, pas toute seule sur des
+  // délais — seul le temps 1 (ralenti muet, sans texte à lire) reste sur un
+  // court minuteur automatique, le reste attend explicitement un tap
+  // (advanceRevelation(), câblée sur un pointerup global tant que ce state
+  // vaut REVELATION). revelationStep : 0 = pas encore prêt (temps 1 en cours),
+  // 1 = temps 2 affiché en attente, 2 = temps 3 affiché en attente,
+  // 3 = temps 4 affiché (écran final, seul le bouton Rejouer agit).
+  var revelationStep = 0;
+  var revelationScoreMs = 0;
+
+  function runRevelation(scoreMs, cause){
+    showScreen('revelation');
+    var temps = ['rv-temps-1', 'rv-temps-2', 'rv-temps-3', 'rv-temps-4'];
+    temps.forEach(function(id){ $(id).classList.remove('is-visible'); });
+
+    revelationStep = 0;
+    revelationScoreMs = scoreMs;
+
+    var t1 = reducedFx ? 300 : 1200;
+
+    // Temps 1 — le ralenti, silencieux
+    $('rv-temps-1').classList.add('is-visible');
+    elVerreScale.style.transition = 'transform ' + t1 + 'ms ' + 'cubic-bezier(.4,0,.2,1)';
+    elVerreScale.style.transform = 'rotate(92deg) scale(.9)';
+
+    setTimeout(function(){
+      $('rv-temps-1').classList.remove('is-visible');
+      elVerreScale.style.transform = '';
+
+      // Temps 2 — la cause, puis le score
+      // Message spécifique à la distraction ratée si prévu (COPY.distractions[id].rate),
+      // sinon le message générique de la cause.
+      var causeCopy = COPY.causes[cause] || '';
+      if (cause === 'action_ratee' && game.causeDistraction){
+        var distCopy = COPY.distractions[game.causeDistraction];
+        if (distCopy && distCopy.rate) causeCopy = distCopy.rate;
+      }
+      $('rv-cause').textContent = causeCopy;
+      $('rv-score').textContent = 'Tu as tenu ' + fmtScoreFr(scoreMs) + ' secondes.';
+      $('rv-temps-2').classList.add('is-visible');
+      setThemeColor('#64A4F6'); // fond bleu à partir d'ici (temps 2/3/4), reste bleu jusqu'au retour à l'accueil/l'attente
+      revelationStep = 1;
+    }, t1);
+  }
+
+  function advanceRevelation(){
+    if (revelationStep === 1){
+      $('rv-temps-2').classList.remove('is-visible');
+
+      // Temps 3 — la validation (flatter avant de faire tomber)
+      var stats = computeStats(revelationScoreMs);
+      animateCount($('rv-validation-nb'), stats.top, reducedFx ? 0 : 600, function(v){ return 'Top ' + v + ' %'; });
+      $('rv-validation-sub').textContent = 'Moyenne des joueurs : ' + stats.moyenneSec + ' s.';
+      $('rv-temps-3').classList.add('is-visible');
+      revelationStep = 2;
+
+    } else if (revelationStep === 2){
+      $('rv-temps-3').classList.remove('is-visible');
+
+      // Temps 4 — le retournement, à l'échelle réelle
+      var pct = fmtPercentFr(revelationScoreMs);
+      var barWidthPct = Math.max(0, Math.min(100, revelationScoreMs / 18000000 * 100));
+      $('rv-bar-toi').style.width = barWidthPct + '%';
+      $('rv-percent').textContent = 'Tu as surveillé ton verre ' + pct + ' % de ta soirée.';
+      $('rv-temps-4').classList.add('is-visible');
+      revelationStep = 3; // écran final : plus d'avance au tap, seul « Rejouer » agit
+    }
+  }
+
+  // pointerdown, pas pointerup : un doigt déjà posé sur l'écran au moment où
+  // la partie se termine (ex. resté sur une carte ratée) ne doit pas faire
+  // avancer l'écran quand il se lève — seul un NOUVEAU tap, démarré après
+  // l'affichage de l'écran, doit compter. pointerdown garantit ça (il marque
+  // le début d'un contact, jamais la fin d'un contact préexistant).
+  window.addEventListener('pointerdown', function(){
+    if (game.state !== STATE.REVELATION) return;
+    if (revelationStep !== 1 && revelationStep !== 2) return; // temps 1 (auto) ou temps 4 (bouton dédié) : rien à faire ici
+    advanceRevelation();
+  });
+
+  // Le bouton « Rejouer » ramène à l'écran d'attente (« pose ton doigt sur le
+  // verre pour commencer »), il ne relance plus directement une partie.
+  elBtnRejouer.addEventListener('pointerup', function(){
+    if (game.state !== STATE.REVELATION) return;
+    elVerreScale.style.transition = '';
+    elVerreScale.style.transform = '';
+    goToPret();
+  });
+
+  /* ============================================================================
+     BOOT
+     ============================================================================ */
+  boot();
+
+})();
+</script>
+</body>
+</html>
