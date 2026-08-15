@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Lâche pas — Stats admin</title>
+
+<!--
+  ============================================================================
+  STATS.HTML — dashboard admin pour "Lâche pas" (Jalon 2).
+  Fichier unique, pas de build step, même philosophie que game.html — mais
+  CONTRAIREMENT à game.html, cette page PARLE DIRECTEMENT à Firebase (Auth +
+  Realtime Database) : le découplage localStorage/événement de game.html
+  existe pour que le jeu reste jouable hors-ligne, une contrainte qui n'a
+  aucun sens ici (page admin, forcément en ligne, forcément authentifiée).
+
+  Contenu :
+  - Connexion (Firebase Auth email/mot de passe, compte déjà créé)
+  - Sélecteur de classement : Général (hors festival) + festivals créés
+  - Gestion des festivals : créer (juste un nom) + activer (séparément) —
+    activer "Général" désactive le mode festival. Pas de renommer/supprimer
+    en v1 (décision explicite de Sam).
+  - Classement (top 10 par joueur, meilleur score = temps tenu le plus long)
+    en pop-up avec croix pour fermer.
+  - Stats scopées sur le classement sélectionné : nb de parties, temps
+    moyen/médian, % arrivés au bout (45s, cause "cap"), répartition des
+    causes de perte, et quelles distractions précises font le plus perdre.
+  - Bouton "Actualiser" — pas de rafraîchissement live (décision explicite).
+
+  Sécurité : voir lp-firebase.js pour les règles Realtime Database à jour
+  (festivals + activeFestivalId + festivalId dans runs).
+  ============================================================================
+-->
+
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --white:#FFFFFF;
+    --ink:#0A0A0A;
+    --blue:#64A4F6;
+    --border:2px solid var(--ink);
+    --radius:16px;
+    --shadow:4px 4px 0 var(--ink);
+    --font-title:'Bagel Fat One', system-ui, -apple-system, sans-serif;
+    --font-body:'Arimo', system-ui, -apple-system, sans-serif;
+  }
+  @font-face{
+    font-family:'Bagel Fat One';
+    src:url('TYPO/lp-bagel-fat-one.woff2') format('woff2');
+    font-weight:400; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:'Arimo';
+    src:url('TYPO/lp-arimo.woff2') format('woff2');
+    font-weight:100 900; font-style:normal; font-display:swap;
+  }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:#F2F5FB;
+    min-height:100vh;
+  }
+  h1,h2{ font-family:var(--font-title); font-weight:400; margin:0; }
+  .wrap{ max-width:900px; margin:0 auto; padding:1.5rem 1.25rem 4rem; }
+
+  .card{
+    background:var(--white);
+    border:var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:1.25rem;
+    margin-bottom:1.25rem;
+  }
+  .btn{
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:.95rem;
+    color:var(--white);
+    background:var(--blue);
+    border:var(--border);
+    border-radius:999px;
+    padding:.65rem 1.4rem;
+    cursor:pointer;
+    box-shadow:3px 3px 0 var(--ink);
+  }
+  .btn:active{ transform:translate(2px,2px); box-shadow:none; }
+  .btn--white{ background:var(--white); color:var(--ink); }
+  .btn--sm{ font-size:.8rem; padding:.4rem .9rem; box-shadow:2px 2px 0 var(--ink); }
+  .btn:disabled{ opacity:.45; cursor:default; pointer-events:none; }
+
+  input[type="email"], input[type="password"], input[type="text"]{
+    font-family:var(--font-body);
+    font-size:1rem;
+    padding:.6rem .8rem;
+    border:var(--border);
+    border-radius:12px;
+    width:100%;
+    background:var(--white);
+    color:var(--ink);
+  }
+
+  /* ---- Connexion ---- */
+  #view-login{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:1.5rem;
+  }
+  #view-login .card{ width:100%; max-width:360px; margin:0; }
+  #view-login h1{ font-size:1.6rem; margin-bottom:1.25rem; text-align:center; }
+  #view-login label{ display:block; font-size:.85rem; font-weight:700; margin:.9rem 0 .3rem; }
+  #login-error{ color:#C0392B; font-size:.85rem; margin-top:.8rem; min-height:1.2em; }
+  #btn-login{ width:100%; margin-top:1.3rem; }
+
+  /* ---- Dashboard ---- */
+  #view-dashboard{ display:none; }
+  header.top{
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    margin-bottom:1.25rem; flex-wrap:wrap;
+  }
+  header.top h1{ font-size:1.5rem; }
+  .top-actions{ display:flex; gap:.6rem; }
+
+  .active-banner{
+    font-family:var(--font-title);
+    font-size:1.1rem;
+    background:var(--blue);
+    color:var(--white);
+    border:var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:.9rem 1.2rem;
+    margin-bottom:1.25rem;
+  }
+
+  .scope-row{
+    display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+    padding:.6rem 0;
+    border-bottom:1px solid rgba(10,10,10,.1);
+  }
+  .scope-row:last-child{ border-bottom:none; }
+  .scope-row.is-selected{ font-weight:700; }
+  .scope-name-btn{
+    background:none; border:none; padding:0; margin:0;
+    font-family:var(--font-body); font-size:1rem; color:var(--ink);
+    text-align:left; cursor:pointer;
+  }
+  .scope-badge{
+    display:inline-block; margin-left:.5rem;
+    font-size:.7rem; font-weight:700; color:var(--blue);
+  }
+  .scope-actions{ display:flex; gap:.5rem; align-items:center; flex-shrink:0; }
+
+  .new-festival{ display:flex; gap:.6rem; margin-top:1rem; }
+  .new-festival input{ flex:1; }
+
+  .stat-grid{
+    display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr));
+    gap:.9rem; margin-top:.5rem;
+  }
+  .stat-tile{
+    background:#F2F5FB;
+    border:var(--border);
+    border-radius:12px;
+    padding:.9rem;
+    text-align:center;
+  }
+  .stat-tile .num{ font-family:var(--font-title); font-size:1.7rem; display:block; }
+  .stat-tile .label{ font-size:.75rem; color:rgba(10,10,10,.6); }
+
+  .bar-row{ margin:.55rem 0; }
+  .bar-row .bar-label{ display:flex; justify-content:space-between; font-size:.85rem; margin-bottom:.25rem; }
+  .bar-track{ background:#E6ECF7; border-radius:999px; height:10px; overflow:hidden; }
+  .bar-fill{ background:var(--blue); height:100%; border-radius:999px; }
+
+  .empty-note{ font-size:.85rem; color:rgba(10,10,10,.5); }
+
+  /* ---- Pop-up classement (même recette que game.html : overlay + card) ---- */
+  .modal-overlay{
+    position:fixed; inset:0;
+    background:rgba(10,10,10,.45);
+    display:flex; align-items:center; justify-content:center;
+    padding:1.25rem;
+    opacity:0; pointer-events:none;
+    transition:opacity 180ms ease;
+    z-index:50;
+  }
+  .modal-overlay.is-open{ opacity:1; pointer-events:auto; }
+  .modal-card{
+    background:var(--white);
+    border:var(--border);
+    border-radius:var(--radius);
+    box-shadow:6px 6px 0 var(--ink);
+    padding:1.4rem;
+    width:100%; max-width:420px;
+    max-height:80vh;
+    overflow-y:auto;
+    position:relative;
+  }
+  .modal-close{
+    position:absolute; top:.9rem; right:.9rem;
+    width:34px; height:34px;
+    border:var(--border); border-radius:50%;
+    background:var(--white);
+    font-size:1rem; line-height:1;
+    cursor:pointer;
+  }
+  .modal-card h2{ font-size:1.3rem; margin-bottom:.9rem; padding-right:2.2rem; }
+  #classement-scope-label{ font-size:.85rem; color:rgba(10,10,10,.55); margin:-0.5rem 0 1rem; }
+  ol#classement-list{ list-style:none; margin:0; padding:0; }
+  ol#classement-list li{
+    display:flex; align-items:center; gap:.7rem;
+    padding:.5rem 0;
+    border-bottom:1px solid rgba(10,10,10,.08);
+  }
+  ol#classement-list li:last-child{ border-bottom:none; }
+  .rank{ font-family:var(--font-title); font-size:1.1rem; width:1.8rem; flex-shrink:0; }
+  .rank-handle{ flex:1; font-weight:700; }
+  .rank-time{ font-family:var(--font-title); color:var(--blue); }
+</style>
+</head>
+<body>
+
+<!-- ============ Connexion ============ -->
+<div id="view-login">
+  <div class="card">
+    <h1>Lâche pas</h1>
+    <form id="form-login">
+      <label for="login-email">E-mail</label>
+      <input type="email" id="login-email" autocomplete="username" required>
+      <label for="login-password">Mot de passe</label>
+      <input type="password" id="login-password" autocomplete="current-password" required>
+      <p id="login-error"></p>
+      <button type="submit" class="btn" id="btn-login">Se connecter</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ Dashboard ============ -->
+<div id="view-dashboard">
+  <div class="wrap">
+    <header class="top">
+      <h1>Lâche pas — Stats</h1>
+      <div class="top-actions">
+        <button type="button" class="btn btn--white btn--sm" id="btn-refresh">Actualiser</button>
+        <button type="button" class="btn btn--white btn--sm" id="btn-logout">Se déconnecter</button>
+      </div>
+    </header>
+
+    <div class="active-banner" id="active-banner">Mode actif : —</div>
+
+    <div class="card">
+      <h2 style="font-size:1.1rem; margin-bottom:.75rem;">Classements</h2>
+      <div id="scope-list"><p class="empty-note">Chargement…</p></div>
+      <div class="new-festival">
+        <input type="text" id="input-new-festival" placeholder="Nom du nouveau festival" maxlength="80">
+        <button type="button" class="btn btn--sm" id="btn-create-festival">+ Créer</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem;">
+        <h2 style="font-size:1.1rem;">Classement sélectionné</h2>
+        <button type="button" class="btn btn--sm" id="btn-open-classement">Voir le top 10</button>
+      </div>
+      <p class="empty-note" id="scope-selected-label">Général</p>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:1.1rem; margin-bottom:.5rem;">Statistiques</h2>
+      <div class="stat-grid">
+        <div class="stat-tile"><span class="num" id="stat-total">—</span><span class="label">Parties jouées</span></div>
+        <div class="stat-tile"><span class="num" id="stat-avg">—</span><span class="label">Temps moyen</span></div>
+        <div class="stat-tile"><span class="num" id="stat-median">—</span><span class="label">Temps médian</span></div>
+        <div class="stat-tile"><span class="num" id="stat-cap">—</span><span class="label">Arrivés au bout</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:1.1rem; margin-bottom:.5rem;">Causes de perte</h2>
+      <div id="cause-breakdown"><p class="empty-note">—</p></div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:1.1rem; margin-bottom:.5rem;">Distractions qui font le plus perdre</h2>
+      <div id="distraction-breakdown"><p class="empty-note">—</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Pop-up classement ============ -->
+<div id="modal-classement" class="modal-overlay">
+  <div class="modal-card">
+    <button type="button" class="modal-close" id="btn-classement-close" aria-label="Fermer">✕</button>
+    <h2>Top 10</h2>
+    <p id="classement-scope-label">Général</p>
+    <ol id="classement-list"></ol>
+  </div>
+</div>
+
+<script src="lp-firebase-config.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getDatabase, ref, get, push, set, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+
+function $(id){ return document.getElementById(id); }
+
+if (!window.LP_FIREBASE_CONFIG){
+  document.body.innerHTML = '<p style="padding:2rem;font-family:sans-serif;">lp-firebase-config.js absent — configuration Firebase introuvable.</p>';
+  throw new Error('LP_FIREBASE_CONFIG absent');
+}
+var app = initializeApp(window.LP_FIREBASE_CONFIG);
+var auth = getAuth(app);
+var db = getDatabase(app);
+
+/* ============================================================================
+   ÉTAT LOCAL — tout est refait à zéro à chaque "Actualiser" (pas de live,
+   décision explicite de Sam : plus simple, plus léger).
+   ============================================================================ */
+var state = {
+  festivals: {},        // { festivalId: { name, createdAt } }
+  activeFestivalId: '',  // '' = mode Général
+  selectedScope: '',     // '' = Général, sinon un festivalId — ce qu'on est en train de regarder
+  runs: []               // toutes les parties chargées depuis /runs
+};
+
+/* ============================================================================
+   CONNEXION
+   ============================================================================ */
+$('form-login').addEventListener('submit', function(e){
+  e.preventDefault();
+  $('login-error').textContent = '';
+  $('btn-login').disabled = true;
+  signInWithEmailAndPassword(auth, $('login-email').value.trim(), $('login-password').value)
+    .catch(function(err){
+      $('login-error').textContent = "Connexion impossible — vérifie l'e-mail et le mot de passe.";
+      console.warn('[stats] échec connexion', err);
+    })
+    .finally(function(){ $('btn-login').disabled = false; });
+});
+
+$('btn-logout').addEventListener('click', function(){ signOut(auth); });
+
+onAuthStateChanged(auth, function(user){
+  if (user){
+    $('view-login').style.display = 'none';
+    $('view-dashboard').style.display = 'block';
+    loadAll();
+  } else {
+    $('view-dashboard').style.display = 'none';
+    $('view-login').style.display = 'flex';
+  }
+});
+
+/* ============================================================================
+   CHARGEMENT DES DONNÉES
+   ============================================================================ */
+function loadAll(){
+  $('scope-list').innerHTML = '<p class="empty-note">Chargement…</p>';
+  Promise.all([
+    get(ref(db, 'festivals')),
+    get(ref(db, 'activeFestivalId')),
+    get(ref(db, 'runs'))
+  ]).then(function(results){
+    var festivalsSnap = results[0], activeSnap = results[1], runsSnap = results[2];
+
+    state.festivals = festivalsSnap.exists() ? festivalsSnap.val() : {};
+    state.activeFestivalId = activeSnap.exists() ? (activeSnap.val() || '') : '';
+
+    var runsObj = runsSnap.exists() ? runsSnap.val() : {};
+    state.runs = Object.keys(runsObj).map(function(id){
+      var r = runsObj[id];
+      r.id = id;
+      return r;
+    });
+
+    // Par défaut : on regarde le mode actif au chargement (le plus probable
+    // vu ce qu'on veut surveiller), sauf s'il ne correspond plus à rien
+    // (festival supprimé — pas censé arriver en v1, mais on reste prudent).
+    if (state.selectedScope && state.selectedScope !== '' && !state.festivals[state.selectedScope]){
+      state.selectedScope = '';
+    }
+    if (!state.selectedScope){ state.selectedScope = state.activeFestivalId || ''; }
+
+    renderScopeList();
+    renderActiveBanner();
+    renderStats();
+  }).catch(function(err){
+    $('scope-list').innerHTML = '<p class="empty-note">Erreur de chargement : ' + (err && err.message ? err.message : err) + '</p>';
+    console.warn('[stats] échec chargement', err);
+  });
+}
+$('btn-refresh').addEventListener('click', loadAll);
+
+/* ============================================================================
+   FESTIVALS — création + activation (pas de renommer/supprimer en v1)
+   ============================================================================ */
+$('btn-create-festival').addEventListener('click', function(){
+  var name = $('input-new-festival').value.trim();
+  if (!name) return;
+  $('btn-create-festival').disabled = true;
+  var newRef = push(ref(db, 'festivals'));
+  set(newRef, { name: name, createdAt: serverTimestamp() })
+    .then(function(){
+      $('input-new-festival').value = '';
+      loadAll();
+    })
+    .catch(function(err){ alert('Création impossible : ' + (err && err.message ? err.message : err)); })
+    .finally(function(){ $('btn-create-festival').disabled = false; });
+});
+
+function activateScope(festivalId){
+  set(ref(db, 'activeFestivalId'), festivalId || null)
+    .then(loadAll)
+    .catch(function(err){ alert('Activation impossible : ' + (err && err.message ? err.message : err)); });
+}
+
+/* ============================================================================
+   AFFICHAGE — liste des classements + bannière du mode actif
+   ============================================================================ */
+function festivalName(id){
+  if (!id) return 'Général';
+  return (state.festivals[id] && state.festivals[id].name) || 'Festival supprimé';
+}
+
+function renderActiveBanner(){
+  $('active-banner').textContent = 'Mode actif : ' + festivalName(state.activeFestivalId);
+}
+
+function renderScopeList(){
+  var ids = Object.keys(state.festivals).sort(function(a, b){
+    return (state.festivals[b].createdAt || 0) - (state.festivals[a].createdAt || 0);
+  });
+  var scopes = [''].concat(ids); // '' = Général, toujours en premier
+
+  var html = scopes.map(function(id){
+    var isActive = id === (state.activeFestivalId || '');
+    var isSelected = id === state.selectedScope;
+    return '<div class="scope-row' + (isSelected ? ' is-selected' : '') + '">' +
+      '<button type="button" class="scope-name-btn" data-scope="' + id + '">' +
+        festivalName(id) +
+        (isActive ? '<span class="scope-badge">● En cours</span>' : '') +
+      '</button>' +
+      '<div class="scope-actions">' +
+        (isActive ? '' : '<button type="button" class="btn btn--white btn--sm" data-activate="' + id + '">Activer</button>') +
+      '</div>' +
+    '</div>';
+  }).join('');
+  $('scope-list').innerHTML = html;
+
+  $('scope-list').querySelectorAll('[data-scope]').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      state.selectedScope = btn.getAttribute('data-scope');
+      renderScopeList();
+      renderStats();
+    });
+  });
+  $('scope-list').querySelectorAll('[data-activate]').forEach(function(btn){
+    btn.addEventListener('click', function(){ activateScope(btn.getAttribute('data-activate')); });
+  });
+}
+
+/* ============================================================================
+   STATS — scopées sur state.selectedScope
+   ============================================================================ */
+var CAUSE_LABELS = {
+  deux_doigts: 'Deux doigts posés',
+  jauge: 'Jauge de risque pleine',
+  action_ratee: 'Action ratée',
+  leurre: 'Piégé par un leurre',
+  cap: 'Arrivé au bout (45s)'
+};
+
+function fmtSec(ms){ return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; }
+
+function median(sortedNums){
+  var n = sortedNums.length;
+  if (!n) return 0;
+  var mid = Math.floor(n / 2);
+  return n % 2 ? sortedNums[mid] : (sortedNums[mid - 1] + sortedNums[mid]) / 2;
+}
+
+function prettyDistractionId(id){
+  return id.replace(/_/g, ' ').replace(/^./, function(c){ return c.toUpperCase(); });
+}
+
+function renderBars(container, entries, total){
+  // entries: [[label, count], ...] déjà triés décroissant
+  if (!entries.length){
+    container.innerHTML = '<p class="empty-note">Aucune donnée pour ce classement.</p>';
+    return;
+  }
+  container.innerHTML = entries.map(function(e){
+    var pct = total ? Math.round(e[1] / total * 100) : 0;
+    return '<div class="bar-row">' +
+      '<div class="bar-label"><span>' + e[0] + '</span><span>' + e[1] + ' (' + pct + ' %)</span></div>' +
+      '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
+    '</div>';
+  }).join('');
+}
+
+function scopedRuns(){
+  var scope = state.selectedScope || '';
+  return state.runs.filter(function(r){ return (r.festivalId || '') === scope; });
+}
+
+function renderStats(){
+  $('scope-selected-label').textContent = festivalName(state.selectedScope);
+  $('classement-scope-label').textContent = festivalName(state.selectedScope);
+
+  var runs = scopedRuns();
+  var total = runs.length;
+
+  $('stat-total').textContent = total;
+
+  if (!total){
+    $('stat-avg').textContent = '—';
+    $('stat-median').textContent = '—';
+    $('stat-cap').textContent = '—';
+    renderBars($('cause-breakdown'), [], 0);
+    renderBars($('distraction-breakdown'), [], 0);
+    return;
+  }
+
+  var scores = runs.map(function(r){ return r.scoreMs || 0; }).sort(function(a, b){ return a - b; });
+  var avgMs = scores.reduce(function(s, v){ return s + v; }, 0) / total;
+  $('stat-avg').textContent = fmtSec(avgMs);
+  $('stat-median').textContent = fmtSec(median(scores));
+
+  var capCount = runs.filter(function(r){ return r.cause === 'cap'; }).length;
+  $('stat-cap').textContent = capCount + ' (' + Math.round(capCount / total * 100) + ' %)';
+
+  // Causes — les 5 catégories connues, même si certaines sont à 0 (utile de
+  // voir qu'une cause n'est jamais arrivée, pas juste l'omettre).
+  var causeCounts = {};
+  Object.keys(CAUSE_LABELS).forEach(function(c){ causeCounts[c] = 0; });
+  runs.forEach(function(r){ if (causeCounts[r.cause] != null) causeCounts[r.cause]++; });
+  var causeEntries = Object.keys(causeCounts)
+    .map(function(c){ return [CAUSE_LABELS[c], causeCounts[c]]; })
+    .sort(function(a, b){ return b[1] - a[1]; });
+  renderBars($('cause-breakdown'), causeEntries, total);
+
+  // Distractions — seulement celles réellement responsables d'une perte
+  // (distractionId non nul, donc action_ratee/leurre), triées par fréquence.
+  var distCounts = {};
+  runs.forEach(function(r){
+    if (!r.distractionId) return;
+    distCounts[r.distractionId] = (distCounts[r.distractionId] || 0) + 1;
+  });
+  var distTotal = Object.keys(distCounts).reduce(function(s, k){ return s + distCounts[k]; }, 0);
+  var distEntries = Object.keys(distCounts)
+    .map(function(id){ return [prettyDistractionId(id), distCounts[id]]; })
+    .sort(function(a, b){ return b[1] - a[1]; })
+    .slice(0, 10);
+  renderBars($('distraction-breakdown'), distEntries, distTotal);
+}
+
+/* ============================================================================
+   POP-UP CLASSEMENT — top 10 PAR JOUEUR (meilleur score de chaque clientId,
+   pas 10 lignes du même joueur qui aurait rejoué plusieurs fois).
+   ============================================================================ */
+function topTen(){
+  var best = {}; // clientId -> meilleure run
+  scopedRuns().forEach(function(r){
+    var key = r.clientId || r.id;
+    if (!best[key] || (r.scoreMs || 0) > (best[key].scoreMs || 0)) best[key] = r;
+  });
+  return Object.keys(best).map(function(k){ return best[k]; })
+    .sort(function(a, b){ return (b.scoreMs || 0) - (a.scoreMs || 0); })
+    .slice(0, 10);
+}
+
+function openClassement(){
+  var list = topTen();
+  $('classement-scope-label').textContent = festivalName(state.selectedScope);
+  if (!list.length){
+    $('classement-list').innerHTML = '<li class="empty-note" style="border:none;">Aucune partie enregistrée pour ce classement.</li>';
+  } else {
+    $('classement-list').innerHTML = list.map(function(r, i){
+      var name = r.handle ? ('@' + r.handle) : 'Joueur anonyme';
+      return '<li><span class="rank">' + (i + 1) + '</span>' +
+        '<span class="rank-handle">' + name + '</span>' +
+        '<span class="rank-time">' + fmtSec(r.scoreMs || 0) + '</span></li>';
+    }).join('');
+  }
+  $('modal-classement').classList.add('is-open');
+}
+function closeClassement(){ $('modal-classement').classList.remove('is-open'); }
+
+$('btn-open-classement').addEventListener('click', openClassement);
+$('btn-classement-close').addEventListener('click', closeClassement);
+$('modal-classement').addEventListener('click', function(e){
+  if (e.target === $('modal-classement')) closeClassement();
+});
+</script>
+</body>
+</html>

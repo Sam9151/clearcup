@@ -7,6 +7,15 @@
 <meta name="description" content="Combien de temps tu tiens à surveiller ton verre ? Un jeu ClearCup.">
 <title>Lâche pas — ClearCup</title>
 
+<!-- PWA — manifeste et icônes propres au jeu (pas ceux du site principal,
+     voir lp-manifest.json : name/start_url/scope différents, mêmes icônes
+     ASSET_CC réutilisées telles quelles). -->
+<link rel="manifest" href="lp-manifest.json">
+<link rel="apple-touch-icon" href="ASSET_CC/favicon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lâche pas">
+
 <!--
   ============================================================================
   LÂCHE PAS — Jalon 1 (mécanique nue)
@@ -25,7 +34,9 @@
 
   Hors scope Jalon 1 (voir brief, à ajouter au Jalon 2) :
   Firebase, file d'attente hors-ligne, carte de score canvas, capture du @,
-  GTM, service worker / PWA, catalogue complet des distractions.
+  service worker / PWA, catalogue complet des distractions.
+  (GTM envisagé puis volontairement écarté — stats.html/Firebase suffit
+  au besoin réel de Sam, voir README-game.md.)
   ============================================================================
 -->
 
@@ -188,6 +199,15 @@
     transition:transform 120ms var(--ease-out), box-shadow 120ms var(--ease-out);
   }
   .nb-btn:active{ transform:translate(3px,3px); box-shadow:var(--shadow-dark-sm); }
+  /* Variante compacte : même recette (pilule, bordure, ombre dure), réduite
+     pour une action secondaire qui ne doit pas prendre trop de place à
+     l'écran (ex. "Plus tard" dans la popup Instagram). */
+  .nb-btn--sm{
+    font-size:.85rem;
+    padding:.5rem 1.35rem;
+    box-shadow:var(--shadow-dark-sm);
+  }
+  .nb-btn--sm:active{ transform:translate(2px,2px); box-shadow:none; }
 
   /* ==========================================================================
      FENÊTRE — CLASSEMENT (et autres modales à venir, ex. Règles)
@@ -337,7 +357,12 @@
     box-sizing:border-box;
     padding:0 1.5cm; /* marge plancher de 1,5cm de chaque côté (voir demande) */
     margin:0 0 1rem;
-    transform:translateY(calc(-.5rem + 2cm)); /* descendu de 2cm par rapport à la position précédente, sans bouger le reste de la mise en page */
+    /* Décalage vers le bas réduit à 1cm (au lieu de 2cm) : à 2cm, le logo
+       mangeait ~68px sur l'espace réservé au titre juste en dessous (voir
+       #accueil-verre-zone), écrasant le titre entre logo et menu (~12px de
+       marge à peine). 1cm garde le logo légèrement descendu tout en laissant
+       une vraie respiration au titre — voir layoutAccueilGaps(). */
+    transform:translateY(1cm);
   }
   /* Petite entrée en fondu du logo/titre/accroche à l'arrivée sur l'accueil
      (plutôt qu'un cut brut après le stroboscope). .entree est ajoutée par
@@ -345,8 +370,8 @@
      chaque retour à l'accueil (rare : 1er lancement, ou après interruption). */
   .accueil-brand.entree{ animation:accueil-brand-in 480ms var(--ease-out) both; }
   @keyframes accueil-brand-in{
-    from{ opacity:0; transform:translateY(calc(-.5rem + 2cm - 10px)); }
-    to{ opacity:1; transform:translateY(calc(-.5rem + 2cm)); }
+    from{ opacity:0; transform:translateY(calc(1cm - 10px)); }
+    to{ opacity:1; transform:translateY(1cm); }
   }
   .accueil-title.entree{ animation:fade-up 480ms 80ms var(--ease-out) both; }
   .accueil-hint.entree{ animation:fade-up 480ms 140ms var(--ease-out) both; }
@@ -383,23 +408,113 @@
   #accueil-verre-zone{
     position:relative;
     width:100%;
-    min-height:150px;
+    /* Réserve l'espace dans le flux pour le titre (positionné en JS par-
+       dessus, voir layoutAccueilGaps()). Le logo au-dessus est décalé
+       visuellement de 1cm vers le bas (transform, voir .accueil-brand) sans
+       bouger le flux : ce décalage grignote une partie de cette réserve.
+       160px, combiné à la réduction du décalage du logo à 1cm, redonne au
+       titre une marge comparable à celle du reste de l'écran (pseudo/logo
+       en haut, bas du menu) — les deux ont été ajustés ensemble, voir le
+       commentaire sur .accueil-brand. */
+    min-height:160px;
     display:flex; align-items:center; justify-content:center;
+  }
+  /* Titre + accroche, groupés pour être centrés ensemble comme un seul bloc
+     (voir layoutAccueilGaps()) — top posé en JS, le reste ici. */
+  .accueil-title-wrap{
+    position:absolute;
+    left:0; right:0;
+    padding:0 1.5rem;
   }
   .accueil-title{
     font-family:var(--font-title);
     font-size:clamp(2.85rem,13.5vw,4.5rem);
     line-height:.95;
-    margin:.5rem 0 0;
+    margin:0;
     text-align:center;
   }
   .accueil-hint{
     font-family:var(--font-body);
     font-size:.95rem;
     color:rgba(10,10,10,.55);
-    margin:.5rem 0 2rem;
+    margin:.5rem 0 0;
     text-align:center;
   }
+  /* En-tête pseudo + meilleur temps, au-dessus du logo — visible seulement
+     si un @ a été renseigné (voir updatePlayerHeader()), sinon [hidden]
+     masque tout le bloc, sans rien réserver visuellement à sa place.
+     position:absolute (même technique que #jeu-hud) plutôt que dans le flux
+     du flex centré de .screen : sinon, sur les écrans les plus courts, cette
+     ligne en plus pousse le reste du contenu (verre compris) hors du cadre,
+     .screen n'ayant pas de scroll. Ainsi le verre/titre/menu restent centrés
+     à l'identique, avec ou sans en-tête. top posé en JS (layoutAccueilGaps())
+     pour être pile centré entre le haut de l'écran et le logo — la valeur
+     ci-dessous n'est qu'un repli avant le premier calcul. */
+  .accueil-player{
+    position:absolute;
+    top:max(1rem, env(safe-area-inset-top));
+    left:0; right:0;
+    display:flex; align-items:center; justify-content:center; gap:.5rem;
+    font-family:var(--font-body);
+    font-size:.8rem;
+    color:rgba(10,10,10,.6);
+  }
+  .accueil-player__handle{ font-weight:700; color:var(--ink); }
+  .accueil-player__best:not(:empty)::before{ content:'·'; margin-right:.5rem; }
+
+  /* Fenêtre — capture du @ Instagram (voir #modal-instagram) : même recette
+     que les autres modales (.modal-card nb-card), styles propres au contenu
+     du formulaire uniquement. */
+  .mi-sub{
+    font-family:var(--font-body);
+    font-size:.85rem;
+    color:rgba(10,10,10,.6);
+    text-align:center;
+    margin:0 0 1rem;
+  }
+  .mi-input{
+    display:block;
+    width:100%;
+    font-family:var(--font-body);
+    font-size:.95rem;
+    padding:.6rem .8rem;
+    border:var(--border);
+    border-radius:var(--radius-btn);
+    background:var(--white);
+    color:var(--ink);
+    text-align:center;
+    /* Contrairement au reset global (*{touch-action:none; user-select:none}),
+       ce champ doit rester un vrai champ de texte tapable/sélectionnable. */
+    touch-action:manipulation;
+    -webkit-user-select:text;
+    user-select:text;
+  }
+  .mi-input::placeholder{ color:rgba(10,10,10,.35); }
+  .mi-consent{
+    font-family:var(--font-body);
+    font-size:.68rem;
+    line-height:1.4;
+    color:rgba(10,10,10,.5);
+    text-align:center;
+    margin:.6rem 0 0;
+  }
+  .mi-consent a{ color:inherit; text-decoration:underline; }
+  .mi-ok{
+    display:block;
+    width:100%;
+    text-align:center;
+    margin-top:1.1rem;
+  }
+  /* La couleur/forme viennent de nb-btn/nb-btn--white/nb-btn--sm (même DA
+     que les autres boutons, en blanc, en petit — demandé explicitement par
+     Sam) ; .mi-later ne gère plus que le centrage, en taille de contenu
+     plutôt qu'en pleine largeur comme .mi-ok, pour rester discret. */
+  .mi-later{
+    display:block;
+    width:fit-content;
+    margin:.6rem auto 0;
+  }
+
   .accueil-menu{
     display:flex;
     flex-direction:column;
@@ -461,6 +576,37 @@
   }
   #verre-anim.is-bousculade{ animation:bousculade 820ms var(--ease-bounce) both; }
   body.reduced-fx #verre-anim.is-bousculade{ animation-duration:320ms; }
+
+  /* « basses » : tremblement continu, haute fréquence / faible amplitude —
+     volontairement pas de flash de couleur associé (risque stroboscopique),
+     juste du mouvement, cf. §13 du brief sur l'avertissement stroboscope. */
+  @keyframes basses{
+    0%,100%{ transform:translate(0,0); }
+    20%{ transform:translate(2px,-1px); }
+    40%{ transform:translate(-2px,1px); }
+    60%{ transform:translate(2px,1px); }
+    80%{ transform:translate(-2px,-1px); }
+  }
+  #verre-anim.is-basses{ animation:basses 90ms linear infinite; }
+  body.reduced-fx #verre-anim.is-basses{ animation:none; }
+
+  /* « changement de bar » : dérive lente vers un nouveau point de l'écran
+     puis retour, pilotée en JS (transform inline + transition, pas de
+     keyframes) — voir triggerDerive(). La transition elle-même vit ici. */
+  #verre-anim.is-derive{ transition:transform var(--derive-ms, 1900ms) ease-in-out; }
+  body.reduced-fx #verre-anim.is-derive{ transition-duration:400ms; }
+
+  /* « rotation » : le contenu bascule d'un quart de tour puis revient — le
+     verre garde sa position mais son empreinte au sol change, obligeant à
+     réajuster le doigt. */
+  @keyframes verre-rotation{
+    0%{ transform:rotate(0); }
+    15%{ transform:rotate(90deg); }
+    85%{ transform:rotate(90deg); }
+    100%{ transform:rotate(0); }
+  }
+  #verre-anim.is-rotation{ animation:verre-rotation 1900ms var(--ease-out) both; }
+  body.reduced-fx #verre-anim.is-rotation{ animation-duration:500ms; }
 
   /* ==========================================================================
      ÉCRAN 2 — JEU
@@ -564,36 +710,20 @@
     display:flex; justify-content:center; z-index:4;
     pointer-events:none;
   }
-  .lp-card{
-    pointer-events:auto;
-    max-width:78vw;
-    text-align:center;
-    padding:.5rem 1rem;
-    animation:card-in 220ms var(--ease-bounce) both;
-  }
-  .lp-card.is-urgent{ animation:card-urgent 260ms ease-in-out infinite; }
-  body.reduced-fx .lp-card.is-urgent{ animation:none; }
-  @keyframes card-in{ from{ transform:translateY(16px) scale(.9); opacity:0; } to{ transform:translateY(0) scale(1); opacity:1; } }
+  /* card-urgent : pulse partagé par toutes les cartes en fin de fenêtre
+     (.lp-order.is-urgent plus bas — pote_appelle a son propre pulse sur le
+     bouton répondre, voir call-answer-pulse). */
   @keyframes card-urgent{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.045); } }
-  .lp-card__texte{
-    font-family:var(--font-body);
-    font-weight:700;
-    font-size:1.05rem;
-    color:var(--ink);
-    margin:0 0 .35rem;
-  }
-  .lp-card__label{
-    display:inline-block;
-    font-family:var(--font-title);
-    font-size:1.6rem;
-    text-transform:uppercase;
-    color:var(--ink);
-  }
-  /* Flash « raté » : couleur simple (pas d'animation) pour ne pas entrer en
-     conflit avec le pulse de .is-urgent (déjà actif juste avant, cf. loop()),
-     qui continue de tourner sans interférence puisqu'on ne touche pas transform. */
-  .lp-card.is-missed .lp-card__texte,
-  .lp-card.is-missed .lp-card__label{ color:var(--alerte); }
+  /* Petit "à-coup" à chaque premier tap d'un double-tap (drop_arrive) — un
+     seul pulse, pas une boucle, pour donner un accusé de réception avant le
+     2e tap sans se confondre avec card-urgent. */
+  /* 0%/100% déclarés explicitement (pas juste 50%) : sans ça, le navigateur
+     retombe sur la valeur de transform « sous-jacente » de .lp-order, soit
+     translateY(120%) — sa position de départ hors écran avant l'animation
+     d'entrée — et la carte saute de ~80px pendant les 140ms du pulse. */
+  @keyframes tap-pulse{ 0%,100%{ transform:translateY(0) scale(1); } 50%{ transform:translateY(0) scale(1.05); } }
+  .lp-order.is-tap-pulse{ animation:tap-pulse 140ms ease-out; }
+  body.reduced-fx .lp-order.is-tap-pulse{ animation:none; }
 
   /* « pote_appelle » : seule distraction à casser volontairement la règle
      « sans chrome » ci-dessus — elle imite un vrai écran d'appel entrant
@@ -612,12 +742,13 @@
     background:rgba(248,248,248,.92);
     box-shadow:0 10px 28px rgba(10,10,10,.22);
     pointer-events:auto;
-    transform:translateY(-140%);
     animation:call-drop 480ms cubic-bezier(.22,1.5,.5,1) forwards;
     z-index:5;
+    /* Pas de transform statique ici : from/to explicites dans le keyframe,
+       voir le même commentaire sur .lp-order plus bas pour la raison. */
   }
   body.reduced-fx .lp-call{ animation-duration:1ms; }
-  @keyframes call-drop{ to{ transform:translateY(0); } }
+  @keyframes call-drop{ from{ transform:translateY(-140%); } to{ transform:translateY(0); } }
   .lp-call__avatar{
     flex-shrink:0;
     width:2.75rem; height:2.75rem;
@@ -655,20 +786,22 @@
   .lp-call.is-urgent .lp-call__answer{ animation:call-answer-pulse 380ms ease-in-out infinite; }
   body.reduced-fx .lp-call.is-urgent .lp-call__answer{ animation:none; }
   @keyframes call-answer-pulse{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.14); } }
-  /* Appel manqué : même logique de flash que .lp-card.is-missed plus haut. */
+  /* Appel manqué : même logique de flash que .lp-order.is-missed plus bas. */
   .lp-call.is-missed{ background:rgba(239,68,68,.16); }
   .lp-call.is-missed .lp-call__name,
   .lp-call.is-missed .lp-call__sub{ color:var(--alerte); }
-  /* « commande_prete » : 2e distraction stylisée façon notification (au même
-     niveau de finition que .lp-call), mais volontairement pas la même recette
-     — l'appel imite un vrai écran de téléphone (fond flouté, ancré en haut,
-     bouton rond vert) ; ici on garde le DA neo-brutaliste du jeu (nb-card,
-     bordure/ombre dures) et on reste ancré dans #card-zone en bas de l'écran,
-     zone du pouce, comme une fiche de comptoir qu'on viendrait poser devant
-     soi plutôt qu'une notif de téléphone. L'orange reprend la teinte de
-     .vie-bar-fill.is-mid / --flood (cohérence des indicateurs), pour une
-     identité de couleur propre à cette distraction, différente du vert de
-     l'appel. */
+  /* Recette « order » : la recette générique, réutilisée par la plupart des
+     distractions A/B (seule pote_appelle garde son écran d'appel dédié,
+     .lp-call ci-dessus). Volontairement pas la même recette que l'appel —
+     ici on garde le DA neo-brutaliste du jeu (bordure/ombre dures), ancré en
+     bas de #card-zone, zone du pouce, comme une fiche posée devant soi.
+     --card-accent (posée en JS par distraction, voir buildOrderCard()) fait
+     varier la couleur sans dupliquer la recette — importante pour que les
+     leurres (type B) restent visuellement indiscernables des vraies actions :
+     aucune couleur n'est réservée à un type, seul le contenu trahit le piège.
+     Deux variantes d'action, mêmes carcasse/proportions : anneau de
+     progression (.is-ring, distraction à interaction "hold") et rail à
+     glisser (.is-slider, interaction "slide") — voir buildActionElement(). */
   .lp-order{
     pointer-events:auto;
     display:flex; align-items:center; gap:.75rem;
@@ -678,11 +811,18 @@
     border:var(--border);
     border-radius:1.15rem;
     box-shadow:var(--shadow-dark);
-    transform:translateY(120%);
     animation:order-up 420ms var(--ease-bounce) forwards;
+    /* Pas de transform statique ici (contrairement à l'ancienne version) :
+       from/to sont déclarés explicitement dans le keyframe ci-dessous, pour
+       que la position de repos RÉELLE (hors animation, transform initial de
+       .lp-order) soit translateY(0) — pas hors écran. Important parce que
+       .is-tap-pulse (drop_arrive) interrompt momentanément cette animation
+       (voir handleDoubleTap()) : si la position de repos était restée
+       translateY(120%), l'interruption aurait fait retomber la carte hors
+       écran au lieu de la laisser en place. */
   }
   body.reduced-fx .lp-order{ animation-duration:1ms; }
-  @keyframes order-up{ to{ transform:translateY(0); } }
+  @keyframes order-up{ from{ transform:translateY(120%); } to{ transform:translateY(0); } }
   /* Une seule animation (pas order-up + card-urgent en parallèle) : l'entrée
      est déjà terminée quand is-urgent s'active (fenêtre qui touche à sa fin),
      la rejouer provoquerait un saut visible en redescendant la carte hors
@@ -694,10 +834,17 @@
     flex-shrink:0;
     width:2.75rem; height:2.75rem;
     border-radius:50%;
-    background:#F59E0B;
+    background:var(--card-accent, #F59E0B);
     color:var(--white);
     display:flex; align-items:center; justify-content:center;
     font-size:1.3rem;
+  }
+  /* Variante avatar (tag_ig) : même rond que .lp-call__avatar — une initiale
+     plutôt qu'un émoji, cohérent avec l'écran d'appel pour ce type de contenu
+     social. */
+  .lp-order__icon.is-avatar{
+    font-family:var(--font-title);
+    font-size:1.05rem;
   }
   .lp-order__info{ flex:1; min-width:0; }
   .lp-order__title{
@@ -720,29 +867,60 @@
     font-weight:700;
     font-size:.82rem;
     color:var(--white);
-    background:#F59E0B;
+    background:var(--card-accent, #F59E0B);
     padding:.5rem .9rem;
     border-radius:var(--radius-btn);
     white-space:nowrap;
   }
   .lp-order.is-urgent .lp-order__action{ animation:call-answer-pulse 380ms ease-in-out infinite; }
   body.reduced-fx .lp-order.is-urgent .lp-order__action{ animation:none; }
-  /* Ratée : même logique de flash que .lp-card/.lp-call.is-missed plus haut. */
+  /* Variante « hold » (photo_groupe) : l'action pilule devient un anneau de
+     progression SVG. stroke-dashoffset mis à jour image par image dans
+     loop() tant que game.holdState est actif (voir plus bas dans le JS). */
+  .lp-order__action.is-ring{
+    background:none;
+    padding:0;
+    width:2.6rem; height:2.6rem;
+    border-radius:50%;
+  }
+  .lp-order__action.is-ring svg{ width:100%; height:100%; transform:rotate(-90deg); display:block; }
+  .lp-order__action.is-ring circle{ fill:none; stroke-width:4; }
+  .lp-order__action.is-ring .ring-track{ stroke:rgba(10,10,10,.12); }
+  .lp-order__action.is-ring .ring-fill{ stroke:var(--card-accent, #64A4F6); stroke-linecap:round; transition:stroke-dashoffset 40ms linear; }
+  /* Variante « slide » (story_poster) : l'action pilule devient un rail que
+     le pouce fait glisser jusqu'au bout — voir startSlide()/updateSlide(). */
+  .lp-order__action.is-slider{
+    position:relative;
+    background:rgba(10,10,10,.08);
+    width:5.5rem; height:2.2rem;
+    padding:0;
+  }
+  .lp-order__action.is-slider .slider-thumb{
+    position:absolute; top:2px; left:2px;
+    width:1.85rem; height:1.85rem;
+    border-radius:50%;
+    background:var(--card-accent, #64A4F6);
+    color:var(--white);
+    display:flex; align-items:center; justify-content:center;
+    font-size:.85rem;
+    transition:left 40ms linear;
+  }
+  /* Ratée : même logique de flash que .lp-call.is-missed plus haut. */
   .lp-order.is-missed{ background:rgba(239,68,68,.1); }
   .lp-order.is-missed .lp-order__title,
   .lp-order.is-missed .lp-order__sub{ color:var(--alerte); }
   .lp-order.is-missed .lp-order__icon,
   .lp-order.is-missed .lp-order__action{ background:var(--alerte); }
+  .lp-order.is-missed .lp-order__action.is-ring .ring-fill{ stroke:var(--alerte); }
 
   /* Sortie animée de tous les formats de carte (voir removeCard()) — spécificité
-     (0,2,0) plus haute que .lp-card{animation:card-in} / .lp-call{animation:
-     call-drop} / .lp-order{animation:order-up}, remplace donc proprement
-     l'animation d'entrée déjà terminée. */
-  .lp-card.is-leaving, .lp-call.is-leaving, .lp-order.is-leaving{
+     (0,2,0) plus haute que .lp-call{animation:call-drop} / .lp-order{animation:
+     order-up}, remplace donc proprement l'animation d'entrée déjà terminée. */
+  .lp-call.is-leaving, .lp-order.is-leaving{
     animation:card-out 150ms ease-in forwards;
     pointer-events:none;
   }
-  body.reduced-fx .lp-card.is-leaving, body.reduced-fx .lp-call.is-leaving, body.reduced-fx .lp-order.is-leaving{ animation-duration:1ms; }
+  body.reduced-fx .lp-call.is-leaving, body.reduced-fx .lp-order.is-leaving{ animation-duration:1ms; }
   @keyframes card-out{ to{ transform:translateY(-10px) scale(.92); opacity:0; } }
 
   /* ==========================================================================
@@ -894,7 +1072,17 @@
 
   .rv-brand{ margin:0; } /* espacement géré par le gap de #rv-temps-4 .rv-card, pas de double-espacement */
   .rv-brand svg{ width:110px; height:auto; display:block; }
-  #btn-rejouer{ margin-top:1.1rem; } /* espace intermédiaire avant le CTA */
+  /* Partager mon score : CTA principal de cet écran (bleu, .nb-btn par
+     défaut), en premier dans la pile de boutons — c'est l'action qu'on veut
+     mettre en avant après la révélation. Voir shareScore()/buildShareCanvas(). */
+  #btn-partager{ margin-top:1.1rem; } /* espace intermédiaire avant le CTA */
+  #btn-rejouer{ margin-top:.7rem; }
+  /* Retour au menu : même DA que Rejouer (recette .nb-btn — pilule, bordure
+     2px, ombre dure) mais en bleu marque, demandé explicitement par Sam.
+     .nb-btn est bleu par défaut (voir plus haut) : pas de modificateur à
+     ajouter, juste ne PAS mettre .nb-btn--white dessus (contrairement à
+     Rejouer). */
+  #btn-retour-menu{ margin-top:.7rem; }
 </style>
 </head>
 <body>
@@ -913,6 +1101,13 @@
 
   <!-- ============ ÉCRAN 1 — Accueil ============ -->
   <section id="screen-accueil" class="screen animated-gradient">
+    <!-- Pseudo + meilleur temps, uniquement si un @ a été renseigné (sinon
+         entièrement masqué, cf. updatePlayerHeader()) — au-dessus du logo,
+         demandé explicitement par Sam. -->
+    <div id="accueil-player" class="accueil-player" hidden>
+      <span id="accueil-player-handle" class="accueil-player__handle"></span>
+      <span id="accueil-player-best" class="accueil-player__best"></span>
+    </div>
     <div class="accueil-brand" aria-hidden="true"><svg id="LOGO_SEC_accueil" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 217.11 283.63">
   <defs>
     <style>
@@ -990,8 +1185,15 @@
   </g>
 </svg></div>
     <div id="accueil-verre-zone"></div>
-    <h1 class="accueil-title">Lâche pas</h1>
-    <p class="accueil-hint">Garde le doigt sur ton verre.</p>
+
+    <!-- Position calculée en JS (layoutAccueilGaps()) pour être pile centré
+         entre le bas du verre et le bouton Commencer, plutôt qu'une valeur
+         CSS fixe qui ne "colle" que sur un seul gabarit d'écran — demandé
+         explicitement par Sam pour une meilleure lisibilité. -->
+    <div id="accueil-title-wrap" class="accueil-title-wrap">
+      <h1 class="accueil-title">Lâche pas</h1>
+      <p class="accueil-hint">Garde le doigt sur ton verre.</p>
+    </div>
 
     <div class="accueil-menu">
       <button type="button" id="btn-commencer" class="nb-btn">Commencer</button>
@@ -1143,12 +1345,33 @@
   </g>
 </svg></div>
       </div>
+      <button type="button" id="btn-partager" class="nb-btn">Partager mon score</button>
       <button type="button" id="btn-rejouer" class="nb-btn nb-btn--white">Rejouer</button>
+      <button type="button" id="btn-retour-menu" class="nb-btn">Retour au menu</button>
     </div>
   </section>
 
   <!-- ============ Overlay rotation forcée (CSS pur) ============ -->
   <div id="screen-rotate"><p>Tourne ton téléphone</p></div>
+
+  <!-- ============ Fenêtre — Capture du @ Instagram (1er lancement uniquement) ============
+       Jamais bloquant : "Continuer" valide le champ (vide = simple skip),
+       "Plus tard" ignore ce qui est tapé — les deux ferment la popup et ne la
+       redemandent plus jamais (voir markInstagramAsked() / maybeShowInstagramCapture()). -->
+  <div id="modal-instagram" class="modal-overlay" hidden>
+    <div class="modal-card nb-card">
+      <h2 class="modal-title">Ton Instagram</h2>
+      <p class="mi-sub">Facultatif — pour qu'on puisse te taguer si tu fais un bon score.</p>
+      <input type="text" id="input-instagram" class="mi-input" placeholder="@toncompte"
+        autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="30">
+      <p class="mi-consent">En renseignant ton compte Instagram, tu acceptes que ClearCup te
+        contacte ou te tague en story si tu réalises un bon score. Conformément à la nLPD, tu peux demander la
+        suppression de cette donnée à tout moment à <a href="mailto:info@clearcup.ch">info@clearcup.ch</a>.
+        <a href="index.html#confidentialite">Politique de confidentialité</a>.</p>
+      <button type="button" id="btn-instagram-ok" class="nb-btn mi-ok">Continuer</button>
+      <button type="button" id="btn-instagram-later" class="nb-btn nb-btn--white nb-btn--sm mi-later">Plus tard</button>
+    </div>
+  </div>
 
   <!-- ============ Fenêtre — Classement (données fictives, Jalon 1) ============ -->
   <div id="modal-classement" class="modal-overlay" hidden>
@@ -1280,28 +1503,68 @@
     interrupted: 'Partie interrompue. On reprend depuis le début.',
     causes: {
       deux_doigts: 'Deux mains ? Dans la vraie vie t’as ton verre dans une main et ton téléphone dans l’autre.',
-      leurre: 'Juste une alerte batterie. Tu as lâché ton verre pour ça.',
+      leurre: 'T’as tapé une fausse alerte. Tu as lâché ton verre pour ça.', // fallback générique, voir COPY.distractions[id].rate pour un message dédié par distraction
       jauge: 'Trois secondes d’inattention. C’est tout ce qu’il faut.',
       action_ratee: 'Tu as gardé ton verre. T’as raté ce qu’il fallait faire à côté.', // fallback générique, voir COPY.distractions[id].rate pour un message dédié par distraction
       cap: 'Le soleil se lève. Match nul.'
     },
     distractions: {
-      // nom/sousTitre : utilisés par l'écran d'appel iPhone (voir .lp-call),
-      // pas par les cartes classiques. rate : message de révélation spécifique
-      // si cette distraction précise fait perdre (sinon fallback sur
-      // causes.action_ratee, voir runRevelation()).
+      // nom/sousTitre/label : texte affiché sur la carte (voir buildOrderCard()/
+      // buildCallBanner()). rate : message de révélation spécifique si cette
+      // distraction précise fait perdre (action_ratee OU leurre — sinon
+      // fallback sur COPY.causes, voir runRevelation()).
       pote_appelle:   {
         texte: 'Ton pote t’appelle', label: 'Répondre',
         nom: 'Lucas', sousTitre: 'mobile',
         rate: 'T’as laissé sonner. Le temps de décrocher, t’as lâché ton verre.'
       },
       commande_prete: {
-        // nom/sousTitre : utilisés par la fiche de comptoir (voir .lp-order),
-        // pas par les cartes classiques — même logique que pote_appelle plus haut.
         texte: 'Commande prête', label: 'Récupérer', sousTitre: 'à retirer au comptoir',
         rate: 'Tu étais trop concentré sur ton burger, t’as pas fait attention à ton verre.'
       },
-      notif_batterie: { texte: 'Batterie faible — 12 %' }
+      photo_groupe: {
+        texte: 'Photo de groupe !', sousTitre: 'Tout le monde est là', label: 'Maintiens',
+        rate: 'Le temps de sourire pour la photo, t’as lâché ton verre.'
+      },
+      drop_arrive: {
+        texte: 'Le drop arrive', sousTitre: 'Lève les bras', label: '× 2',
+        rate: 'Le refrain est tombé. Toi aussi, t’as lâché ton verre.'
+      },
+      uber_arrive: {
+        texte: 'Ton Uber est arrivé', sousTitre: 'Devant l’entrée', label: 'Confirmer',
+        rate: 'Le temps de valider la course, t’as lâché ton verre.'
+      },
+      story_poster: {
+        texte: 'Story prête à poster', sousTitre: 'Glisse pour publier', label: '→',
+        rate: 'Le temps de poster ta story, t’as lâché ton verre.'
+      },
+      notif_batterie: {
+        texte: 'Batterie faible — 12 %', sousTitre: 'Économie d’énergie ?', label: 'Activer',
+        rate: 'Juste une alerte batterie. T’as lâché ton verre pour vérifier.'
+      },
+      pub_flash: {
+        texte: '-50 % aujourd’hui seulement', sousTitre: 'Offre flash', label: 'Profiter',
+        rate: 'Une pub à -50 %. T’as lâché ton verre pour une offre bidon.'
+      },
+      tag_ig: {
+        // texte porte le prénom en toutes lettres (contrairement à
+        // pote_appelle/.lp-call, buildOrderCard() n'affiche que copy.texte
+        // dans le titre — nom ne sert qu'à l'initiale de l'avatar).
+        texte: 'Léa t’a taguée', sousTitre: 'dans une story, il y a 2 min', label: 'Voir', nom: 'Léa',
+        rate: 'Juste un tag Instagram. T’as lâché ton verre pour voir.'
+      },
+      mail_pro: {
+        texte: 'Marie (RH) : point demain', sousTitre: 'Boîte pro', label: 'Lire',
+        rate: 'Un mail pro, à cette heure. T’as lâché ton verre pour ça.'
+      },
+      meteo_orage: {
+        texte: 'Orage dans 10 minutes', sousTitre: 'Alerte météo', label: 'Voir',
+        rate: 'Une alerte météo. T’as lâché ton verre pour vérifier le ciel.'
+      },
+      maj_app: {
+        texte: 'Mise à jour disponible', sousTitre: '2 nouveautés', label: 'Installer',
+        rate: 'Une mise à jour d’appli. T’as lâché ton verre pour ça.'
+      }
     }
   };
 
@@ -1329,21 +1592,49 @@
     CAP_MS: 45000,
     START_GRACE_MS: 350, // grâce en tout début de partie (voir loop())
     PHASES: [
-      { id:'confiance',  from:0,     gaugeFillMs:1200, cardIntervalMs:4200, bousculadeIntervalMs:99999 },
-      { id:'montee',     from:8000,  gaugeFillMs:950,  cardIntervalMs:3000, bousculadeIntervalMs:7000  },
-      { id:'chaos',      from:18000, gaugeFillMs:700,  cardIntervalMs:2000, bousculadeIntervalMs:4500  },
-      { id:'impossible', from:30000, gaugeFillMs:500,  cardIntervalMs:1300, bousculadeIntervalMs:3000  }
+      // typeCIntervalMs remplace l'ancien bousculadeIntervalMs : il planifie
+      // maintenant n'importe laquelle des distractions de type C (bousculade,
+      // basses, dérive, rotation — voir scheduleTypeC()), pas seulement le
+      // shake d'origine.
+      { id:'confiance',  from:0,     gaugeFillMs:1200, cardIntervalMs:4200, typeCIntervalMs:99999 },
+      { id:'montee',     from:8000,  gaugeFillMs:950,  cardIntervalMs:3000, typeCIntervalMs:7000  },
+      { id:'chaos',      from:18000, gaugeFillMs:700,  cardIntervalMs:2000, typeCIntervalMs:4500  },
+      { id:'impossible', from:30000, gaugeFillMs:500,  cardIntervalMs:1300, typeCIntervalMs:3000  }
     ],
     GAUGE_DRAIN_MULTIPLIER: 2,
-    BOUSCULADE_PX: [80, 150]
+    BOUSCULADE_PX: [80, 150],
+    DERIVE_PX: [40, 90],       // amplitude de la dérive lente (type C « changement de bar »)
+    DERIVE_HOLD_MS: 1400,      // temps passé sur la nouvelle position avant de revenir
+    DERIVE_TRANSITION_MS: 1900,
+    BASSES_MS: 1500,           // durée du tremblement haute fréquence / faible amplitude
+    ROTATION_MS: 1900
   };
 
   // DISTRACTIONS — structure de données du §7. Ajouter une distraction = ajouter une ligne.
+  // icon/accent/avatar pilotent le rendu (voir buildOrderCard()) ; interaction
+  // précise le geste requis pour les type A au-delà du tap simple (défaut).
   var DISTRACTIONS = [
-    { id:'pote_appelle',   type:'A', phaseMin:'confiance', fenetreMs:2000, poids:3 },
-    { id:'commande_prete', type:'A', phaseMin:'confiance', fenetreMs:1800, poids:3 },
-    { id:'notif_batterie', type:'B', phaseMin:'confiance', fenetreMs:2200, poids:2 },
-    { id:'bousculade',     type:'C', phaseMin:'montee' }
+    // ---- Type A — actions obligatoires (taper/tenir/glisser, sinon action_ratee) ----
+    { id:'pote_appelle',   type:'A', phaseMin:'confiance', fenetreMs:2000, poids:3 }, // rendu spécial, voir buildCallBanner()
+    { id:'commande_prete', type:'A', phaseMin:'confiance', fenetreMs:1800, poids:3, icon:'🧾', accent:'#F59E0B' },
+    { id:'photo_groupe',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'📸', accent:'var(--blue)', interaction:'hold', holdMs:1000 },
+    { id:'drop_arrive',    type:'A', phaseMin:'montee',    fenetreMs:1500, poids:2, icon:'🙌', accent:'var(--blue)', interaction:'doubletap' },
+    { id:'uber_arrive',    type:'A', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'🚗', accent:'var(--ink)' },
+    { id:'story_poster',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'📲', accent:'var(--blue)', interaction:'slide' },
+
+    // ---- Type B — leurres (NE PAS taper, sinon perdu) : même grammaire visuelle que le type A ----
+    { id:'notif_batterie', type:'B', phaseMin:'confiance', fenetreMs:2200, poids:2, icon:'🔋', accent:'#F59E0B' },
+    { id:'pub_flash',      type:'B', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'🏷️', accent:'#F59E0B' },
+    { id:'tag_ig',         type:'B', phaseMin:'confiance', fenetreMs:2000, poids:2, avatar:true,  accent:'var(--blue)' },
+    { id:'mail_pro',       type:'B', phaseMin:'montee',    fenetreMs:2000, poids:2, icon:'✉️', accent:'var(--ink)' },
+    { id:'meteo_orage',    type:'B', phaseMin:'montee',    fenetreMs:2000, poids:2, icon:'⛈️', accent:'var(--ink)' },
+    { id:'maj_app',        type:'B', phaseMin:'confiance', fenetreMs:2200, poids:1, icon:'🔄', accent:'#F59E0B' },
+
+    // ---- Type C — le verre bouge (suivre au doigt, sinon la jauge monte) ----
+    { id:'bousculade', type:'C', phaseMin:'montee' },
+    { id:'basses',     type:'C', phaseMin:'montee' },
+    { id:'derive',     type:'C', phaseMin:'chaos' },
+    { id:'rotation',   type:'C', phaseMin:'chaos' }
   ];
 
   var PERCENTILES_FALLBACK = {
@@ -1374,8 +1665,10 @@
     lastX: 0, lastY: 0,
     activePointers: new Set(),
     cardTimer: 0,
-    bousculadeTimer: 0,
-    activeCard: null,     // { def, remainingMs, el }
+    typeCTimer: 0,        // planifie la prochaine distraction de type C (verre bouge) — pas seulement la bousculade
+    holdState: null,      // { pointerId, startTime, ringFill, thresholdMs } — distraction à interaction "hold" en cours
+    slideState: null,     // { pointerId, startX, thumb, maxOffset, done } — distraction à interaction "slide" en cours
+    activeCard: null,     // { def, remainingMs, el, lastTapTime }
     causeDistraction: null,
     lastFrameTime: 0,
     vieZone: 'safe'       // 'safe' | 'mid' | 'low' — pour ne vibrer qu'au franchissement d'un seuil, pas à chaque frame dedans
@@ -1397,6 +1690,18 @@
   };
   var elAccueilEntree = document.querySelectorAll('.accueil-brand, .accueil-title, .accueil-hint');
   var elAccueilVerreZone = $('accueil-verre-zone');
+  var elAccueilPlayer = $('accueil-player');
+  var elAccueilPlayerHandle = $('accueil-player-handle');
+  var elAccueilPlayerBest = $('accueil-player-best');
+  var elAccueilBrand = document.querySelector('.accueil-brand');
+  var elAccueilTitleWrap = $('accueil-title-wrap');
+  var elAccueilMenu = document.querySelector('.accueil-menu');
+  // Voir layoutAccueilGaps() : remonte le titre d'~1cm par rapport au
+  // centrage pile milieu (demandé explicitement), sans jamais chevaucher le logo.
+  var TITLE_LIFT_PX = 37.8; // 1cm à 96dpi
+  var TITLE_MIN_GAP_PX = 10;
+  var elModalInstagram = $('modal-instagram');
+  var elInputInstagram = $('input-instagram');
   var elPretVerreZone = $('pret-verre-zone');
   var elJeuVerreZone = $('jeu-verre-zone');
   var elJeuHud = $('jeu-hud');
@@ -1405,7 +1710,9 @@
   var elFlood = $('flood');
   var elCardZone = $('card-zone');
   var elInterruptedText = $('interrupted-text');
+  var elBtnPartager = $('btn-partager');
   var elBtnRejouer = $('btn-rejouer');
+  var elBtnRetourMenu = $('btn-retour-menu');
   var elModalClassement = $('modal-classement');
   var elClassementList = $('classement-list');
   var elModalRegles = $('modal-regles');
@@ -1448,6 +1755,317 @@
   function fmtPercentFr(ms){
     return (ms / 18000000 * 100).toFixed(2).replace('.', ',');
   }
+
+  /* ============================================================================
+     PARTAGE DU SCORE — carte 1080×1920 (format story) générée en canvas,
+     puis Web Share API (repli : téléchargement direct de l'image si le
+     navigateur ne sait pas partager de fichier). Uniquement de la
+     typographie (polices de marque déjà chargées via @font-face plus haut,
+     mêmes noms que le CSS) plutôt que de rasteriser les logos SVG inlinés :
+     rendu identique, sans les complications d'encodage/namespace d'un SVG
+     avec <style> scopé converti en image.
+     ============================================================================ */
+  var SHARE_W = 1080, SHARE_H = 1920;
+
+  // Découpe `text` en lignes qui tiennent dans maxWidth et les dessine
+  // centrées à partir de startY, espacées de lineHeight. Retourne le Y juste
+  // après la dernière ligne (pour enchaîner d'autres éléments en dessous).
+  function wrapCanvasText(ctx, text, cx, maxWidth, lineHeight, startY){
+    var words = text.split(' ');
+    var line = '', y = startY;
+    for (var i = 0; i < words.length; i++){
+      var test = line ? (line + ' ' + words[i]) : words[i];
+      if (ctx.measureText(test).width > maxWidth && line){
+        ctx.fillText(line, cx, y);
+        line = words[i];
+        y += lineHeight;
+      } else {
+        line = test;
+      }
+    }
+    if (line) { ctx.fillText(line, cx, y); y += lineHeight; }
+    return y;
+  }
+
+  function roundRectPath(ctx, x, y, w, h, r){
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  }
+
+  function buildShareCanvas(scoreMs, percentileTop, causeText){
+    var canvas = document.createElement('canvas');
+    canvas.width = SHARE_W;
+    canvas.height = SHARE_H;
+    var ctx = canvas.getContext('2d');
+
+    // Fond — bleu marque uni (celui du jeu et de la mascotte), plus de
+    // dégradé ni d'eyebrow "LÂCHE PAS" au-dessus de la carte (demandé
+    // explicitement par Sam, les deux étaient jugés inutiles).
+    ctx.fillStyle = '#64A4F6';
+    ctx.fillRect(0, 0, SHARE_W, SHARE_H);
+
+    ctx.textAlign = 'center';
+    var cx = SHARE_W / 2;
+
+    // Carte blanche centrale (recette nb-card : bordure noire + ombre dure).
+    // Remontée par rapport à avant (plus d'eyebrow au-dessus) pour garder un
+    // espace comparable en haut et en bas du format story.
+    var cardX = 90, cardY = 200, cardW = SHARE_W - 180, cardH = 980, cardR = 56;
+    var shadowOffset = 18;
+    ctx.fillStyle = '#0A0A0A';
+    roundRectPath(ctx, cardX + shadowOffset, cardY + shadowOffset, cardW, cardH, cardR);
+    ctx.fill();
+    ctx.fillStyle = '#FFFFFF';
+    roundRectPath(ctx, cardX, cardY, cardW, cardH, cardR);
+    ctx.fill();
+    ctx.lineWidth = 9;
+    ctx.strokeStyle = '#0A0A0A';
+    roundRectPath(ctx, cardX, cardY, cardW, cardH, cardR);
+    ctx.stroke();
+
+    var innerCx = cardX + cardW / 2;
+
+    // "J'AI TENU"
+    ctx.fillStyle = 'rgba(10,10,10,.55)';
+    ctx.font = '700 40px Arimo, sans-serif';
+    ctx.fillText("J'AI TENU", innerCx, cardY + 130);
+
+    // Le score, en gros, en bleu marque
+    ctx.fillStyle = '#64A4F6';
+    ctx.font = '400 220px "Bagel Fat One", sans-serif';
+    ctx.fillText(fmtScoreFr(scoreMs) + ' s', innerCx, cardY + 340);
+
+    // "Top X % des joueurs"
+    ctx.fillStyle = '#0A0A0A';
+    ctx.font = '400 72px "Bagel Fat One", sans-serif';
+    ctx.fillText('Top ' + percentileTop + ' % des joueurs', innerCx, cardY + 460);
+
+    // Séparateur fin
+    ctx.strokeStyle = 'rgba(10,10,10,.15)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cardX + 90, cardY + 540);
+    ctx.lineTo(cardX + cardW - 90, cardY + 540);
+    ctx.stroke();
+
+    // La cause de la perte — le côté drôle/relatable du jeu
+    ctx.fillStyle = 'rgba(10,10,10,.7)';
+    ctx.font = '400 42px Arimo, sans-serif';
+    var causeY = wrapCanvasText(ctx, causeText, innerCx, cardW - 140, 56, cardY + 630);
+
+    // Punchline de marque, en bas de carte
+    ctx.fillStyle = '#0A0A0A';
+    ctx.font = '700 38px Arimo, sans-serif';
+    var punchY = Math.max(causeY + 40, cardY + cardH - 150);
+    wrapCanvasText(ctx, 'Personne ne tient. On a fait ClearCup pour ça.', innerCx, cardW - 140, 50, punchY);
+
+    // Sous la carte, sur le fond bleu : titre du jeu + CTA. Décalé plus bas
+    // et en 2 lignes (au lieu d'une seule qui débordait à droite) pour
+    // remplir l'espace vide en bas du format story et rester dans le cadre.
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '400 130px "Bagel Fat One", sans-serif';
+    ctx.fillText('Lâche pas', cx, cardY + cardH + 260);
+
+    ctx.font = '700 44px Arimo, sans-serif';
+    wrapCanvasText(ctx, 'Toi aussi, tiens le coup — clearcup.ch/game.html', cx, SHARE_W - 140, 62, cardY + cardH + 350);
+
+    return canvas;
+  }
+
+  // fontFaceSet.load() ne suffit pas toujours seul sur mobile (poids/style
+  // pas exactement ceux déjà utilisés ailleurs sur la page) — on complète
+  // par document.fonts.ready pour être sûr que Bagel Fat One/Arimo sont
+  // prêtes avant de dessiner, sinon le canvas peut être rendu une frame trop
+  // tôt avec la police de repli (rendu flou/générique au lieu de la marque).
+  function ensureShareFontsReady(){
+    var loads = [
+      document.fonts.load('700 54px Arimo'),
+      document.fonts.load('400 220px "Bagel Fat One"')
+    ];
+    return Promise.all(loads).catch(function(){}).then(function(){ return document.fonts.ready; });
+  }
+
+  var sharing = false;
+  function shareScore(){
+    if (sharing) return;
+    sharing = true;
+    var originalLabel = elBtnPartager.textContent;
+    elBtnPartager.textContent = 'Préparation…';
+
+    ensureShareFontsReady().then(function(){
+      var causeText = ($('rv-cause') && $('rv-cause').textContent) || '';
+      var canvas = buildShareCanvas(revelationScoreMs, revelationPercentileTop, causeText);
+      canvas.toBlob(function(blob){
+        if (!blob){ sharing = false; elBtnPartager.textContent = originalLabel; return; }
+        var file = new File([blob], 'lache-pas-score.png', { type: 'image/png' });
+
+        var shareData = {
+          files: [file],
+          title: 'Lâche pas — ClearCup',
+          text: "J'ai tenu " + fmtScoreFr(revelationScoreMs) + ' secondes sur Lâche pas !'
+        };
+
+        if (navigator.share && navigator.canShare && navigator.canShare(shareData)){
+          navigator.share(shareData).catch(function(){ /* annulé par le joueur : rien à faire */ });
+          sharing = false;
+          elBtnPartager.textContent = originalLabel;
+        } else {
+          // Repli : téléchargement direct de l'image (desktop, ou mobile
+          // sans support de partage de fichier) — le joueur la poste
+          // manuellement où il veut.
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          a.href = url;
+          a.download = 'lache-pas-score.png';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+          sharing = false;
+          elBtnPartager.textContent = originalLabel;
+        }
+      }, 'image/png');
+    }).catch(function(){
+      sharing = false;
+      elBtnPartager.textContent = originalLabel;
+    });
+  }
+
+  elBtnPartager.addEventListener('pointerup', shareScore);
+
+  /* ============================================================================
+     ENREGISTREMENT DES PARTIES — Firebase Realtime Database, jamais appelé
+     directement d'ici : ce script ne connaît que localStorage (la file
+     lp_pending_runs) et l'événement 'lp:run-queued'. C'est lp-firebase.js
+     (chargé en <script type="module"> à la fin du fichier) qui écoute cet
+     événement et pousse réellement vers Firebase — voir ce fichier pour le
+     schéma exact des règles de sécurité. Ce découplage fait que le jeu reste
+     jouable à l'identique si Firebase est bloqué, en panne, ou hors-ligne :
+     la file s'accumule et se vide toute seule à la prochaine occasion.
+     ============================================================================ */
+  var GAME_VERSION = '1.1.0';
+  var QUEUE_KEY = 'lp_pending_runs';
+
+  function getClientId(){
+    var id = null;
+    try { id = localStorage.getItem('lp_client_id'); } catch(e){}
+    if (!id){
+      id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+        : ('lp-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
+      try { localStorage.setItem('lp_client_id', id); } catch(e){ /* localStorage indisponible : id généré à chaque partie, tant pis */ }
+    }
+    return id;
+  }
+
+  function getHandle(){
+    var h = null;
+    try { h = localStorage.getItem('lp_instagram_handle'); } catch(e){}
+    return h || null;
+  }
+
+  // Festival actuellement actif (mode "classement dédié à un événement"),
+  // ou null en mode Général. Jamais lu directement depuis Firebase ici
+  // (même découplage que le reste) : lp-firebase.js le récupère une fois au
+  // chargement de la page et le pose dans localStorage — voir ce fichier.
+  // Si la valeur n'est pas encore arrivée (partie jouée dans les toutes
+  // premières secondes, avant le retour de Firebase), la partie part en
+  // Général par défaut : compromis assumé, plus sûr qu'une partie bloquée.
+  function getActiveFestivalId(){
+    var id = null;
+    try { id = localStorage.getItem('lp_active_festival_id'); } catch(e){}
+    return id || null;
+  }
+
+  function queueRun(payload){
+    try {
+      var queue = JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]');
+      queue.push(payload);
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    } catch(e){ /* quota pleine ou storage indisponible : la partie ne sera juste pas enregistrée, pas bloquant pour le joueur */ }
+    window.dispatchEvent(new CustomEvent('lp:run-queued'));
+  }
+
+  /* ============================================================================
+     CAPTURE DU @ INSTAGRAM — popup au tout premier lancement uniquement
+     (§10 du brief). Jamais bloquant : "Continuer" (avec ou sans rien de
+     saisi) et "Plus tard" ferment tous les deux la popup et ne la
+     redemandent plus jamais — voir les handlers de #modal-instagram plus
+     bas (recherche "MODAL_CLOSE_MS" pour openModal()/closeModal()).
+     ============================================================================ */
+  function instagramAlreadyAsked(){
+    try { return localStorage.getItem('lp_instagram_asked') === '1'; } catch(e){ return true; }
+  }
+  function markInstagramAsked(){
+    try { localStorage.setItem('lp_instagram_asked', '1'); } catch(e){}
+  }
+  function maybeShowInstagramCapture(){
+    if (!instagramAlreadyAsked()) openModal(elModalInstagram);
+  }
+  // Retire le @ éventuel, les espaces, met en minuscules — cohérent avec le
+  // schéma (`handle` stocké sans @, cf. les règles de sécurité Firebase).
+  function sanitizeHandle(raw){
+    if (!raw) return null;
+    var h = raw.trim().replace(/^@+/, '').toLowerCase();
+    return h ? h.slice(0, 30) : null;
+  }
+
+  /* ============================================================================
+     EN-TÊTE ACCUEIL — pseudo + meilleur temps local, affiché uniquement si un
+     @ a été renseigné (sinon le bloc reste [hidden], rien à sa place). Le
+     meilleur temps est purement local (lp_best_score_ms) : c'est un repère
+     pour le joueur sur SON appareil, pas un classement — celui-ci viendra
+     de Firebase/stats.html plus tard.
+     ============================================================================ */
+  function updatePlayerHeader(){
+    var handle = getHandle();
+    if (!handle){ elAccueilPlayer.hidden = true; return; }
+    elAccueilPlayerHandle.textContent = '@' + handle;
+    var bestMs = 0;
+    try { bestMs = parseInt(localStorage.getItem('lp_best_score_ms') || '0', 10) || 0; } catch(e){}
+    elAccueilPlayerBest.textContent = bestMs > 0 ? ('Meilleur temps : ' + fmtScoreFr(bestMs) + ' s') : '';
+    elAccueilPlayer.hidden = false;
+  }
+
+  // Centre l'en-tête pseudo/temps entre le haut de l'écran et le logo, et le
+  // titre entre le verre et le bouton Commencer — demandé explicitement par
+  // Sam pour une meilleure lisibilité. Calculé en JS (getBoundingClientRect,
+  // qui tient compte des transform CSS déjà en place sur .accueil-brand)
+  // plutôt qu'en marges fixes qui ne "collent" que sur un seul gabarit
+  // d'écran — même logique que updatePupilLook() ailleurs dans ce fichier.
+  function layoutAccueilGaps(){
+    var screenTop = elScreens.accueil.getBoundingClientRect().top;
+
+    if (!elAccueilPlayer.hidden){
+      var brandTop = elAccueilBrand.getBoundingClientRect().top;
+      var playerH = elAccueilPlayer.offsetHeight;
+      var playerMid = screenTop + (brandTop - screenTop) / 2;
+      elAccueilPlayer.style.top = Math.max(0, playerMid - playerH / 2 - screenTop) + 'px';
+    }
+
+    // Ancré sur le bas du logo (.accueil-brand), pas sur #accueil-verre-zone
+    // — ce dernier est vide/invisible sur l'accueil (le verre interactif
+    // n'y est déplacé qu'à l'écran d'attente, voir goToPret()), donc sans
+    // intérêt comme repère visuel pour le joueur.
+    var brandBottom = elAccueilBrand.getBoundingClientRect().bottom;
+    var menuTop = elAccueilMenu.getBoundingClientRect().top;
+    var wrapH = elAccueilTitleWrap.offsetHeight;
+    // Remonté d'environ 1cm par rapport au centrage pile milieu — demandé
+    // explicitement par Sam ("un peu trop bas"). TITLE_LIFT_PX borné par
+    // TITLE_MIN_GAP_PX pour ne jamais chevaucher le logo sur un petit écran
+    // où le titre serait plus proche du logo que 1cm.
+    var wrapMid = brandBottom + (menuTop - brandBottom) / 2 - TITLE_LIFT_PX;
+    var top = wrapMid - wrapH / 2 - screenTop;
+    var minTop = brandBottom - screenTop + TITLE_MIN_GAP_PX;
+    elAccueilTitleWrap.style.top = Math.max(0, top, minTop) + 'px';
+  }
+  window.addEventListener('resize', function(){
+    if (game.state === STATE.ACCUEIL) layoutAccueilGaps();
+  });
 
   // Petit compteur qui s'incrémente de 0 à `to` (ease-out cubique) plutôt que
   // d'afficher le chiffre déjà résolu — utilisé pour "Top X %" au temps 3.
@@ -1602,9 +2220,19 @@
     setThemeColor('#FFFFFF');
     showScreen('accueil');
 
+    // Mesuré AVANT de déclencher l'animation d'entrée du logo ci-dessous :
+    // pendant cette animation, .accueil-brand est temporairement décalé
+    // (voir @keyframes accueil-brand-in), donc mesurer après aurait donné
+    // une position transitoire au lieu de la position finale du logo —
+    // c'est ce qui décalait le pseudo/temps quand ils étaient affichés.
+    updatePlayerHeader();
+    layoutAccueilGaps();
+
     // Rejoue l'entrée du logo/titre/accroche (reflow forcé, cf. .entree plus haut).
     elAccueilEntree.forEach(function(el){ el.classList.remove('entree'); });
     elAccueilEntree.forEach(function(el){ void el.offsetWidth; el.classList.add('entree'); });
+
+    maybeShowInstagramCapture();
   }
 
   // Le tap direct sur la zone du verre depuis l'accueil et le bouton « Commencer »
@@ -1621,6 +2249,24 @@
 
   $('btn-classement').addEventListener('pointerup', openClassement);
   $('btn-regles').addEventListener('pointerup', openRegles);
+
+  // « Continuer » : valide ce qui est saisi (vide = simple skip, aussi
+  // valable qu'un "Plus tard" explicite) et ferme la popup.
+  $('btn-instagram-ok').addEventListener('pointerup', function(){
+    var h = sanitizeHandle(elInputInstagram.value);
+    if (h){ try { localStorage.setItem('lp_instagram_handle', h); } catch(e){} }
+    markInstagramAsked();
+    updatePlayerHeader();
+    layoutAccueilGaps(); // l'en-tête peut venir d'apparaître pour la 1ère fois : repositionner
+    closeModal(elModalInstagram);
+  });
+  // « Plus tard » : ferme la popup sans rien enregistrer, ne la redemande
+  // plus jamais (même comportement que "Continuer" côté état, juste sans
+  // sauvegarder ce qui a pu être tapé).
+  $('btn-instagram-later').addEventListener('pointerup', function(){
+    markInstagramAsked();
+    closeModal(elModalInstagram);
+  });
 
   /* ============================================================================
      ÉCRAN 1.5 — ATTENTE
@@ -1654,14 +2300,17 @@
     game.activePointers.add(e.pointerId);
     game.lastX = e.clientX; game.lastY = e.clientY;
     game.cardTimer = CONFIG.PHASES[0].cardIntervalMs;
-    game.bousculadeTimer = CONFIG.PHASES[1].bousculadeIntervalMs;
+    game.typeCTimer = CONFIG.PHASES[1].typeCIntervalMs;
     game.activeCard = null;
+    game.holdState = null;
+    game.slideState = null;
     game.causeDistraction = null;
     game.vieZone = 'safe';
     game.lastFrameTime = performance.now();
     elCardZone.innerHTML = '';
 
     moveVerreTo(elJeuVerreZone);
+    resetVerreMotion(); // efface un éventuel transform inline (is-derive) laissé par la partie précédente
     elVerreScale.classList.add('is-held');
     elVerreScale.classList.remove('is-danger');
     elTimer.textContent = '0.0';
@@ -1692,8 +2341,14 @@
       return;
     }
 
-    // Tap sur une carte active (type A ou B) ?
+    // Tap sur une carte active (type A ou B) ? Le geste requis dépend de
+    // l'interaction de la distraction (tap simple par défaut) — voir
+    // DISTRACTIONS / startHold() / startSlide() / handleDoubleTap().
     if (game.activeCard && game.activeCard.el.contains(e.target)){
+      var interaction = game.activeCard.def.interaction;
+      if (interaction === 'hold'){ startHold(game.activeCard, e); return; }
+      if (interaction === 'slide'){ startSlide(game.activeCard, e); return; }
+      if (interaction === 'doubletap'){ handleDoubleTap(game.activeCard, e); return; }
       handleCardTap(game.activeCard);
       return;
     }
@@ -1709,6 +2364,8 @@
     if (game.state !== STATE.JEU) return;
     if (e.pointerId === game.holdingPointerId){
       game.lastX = e.clientX; game.lastY = e.clientY;
+    } else if (game.slideState && e.pointerId === game.slideState.pointerId){
+      updateSlide(e);
     }
   });
 
@@ -1718,6 +2375,9 @@
       game.holding = false;
       game.holdingPointerId = null;
     }
+    // Relâché avant le seuil = reset, pas un échec (voir cancelHold()/cancelSlide()).
+    if (game.holdState && e.pointerId === game.holdState.pointerId) cancelHold();
+    if (game.slideState && e.pointerId === game.slideState.pointerId) cancelSlide();
   }
   window.addEventListener('pointerup', function(e){ if (game.state === STATE.JEU) releasePointer(e); });
   // pointercancel traité exactement comme pointerup (appel entrant, notification…) — §13.2
@@ -1809,11 +2469,28 @@
       }
     }
 
-    // Distraction type C (bousculade du verre)
-    game.bousculadeTimer -= dt;
-    if (game.bousculadeTimer <= 0 && phaseUnlocked('montee')){
-      triggerBousculade();
-      game.bousculadeTimer = phase.bousculadeIntervalMs * (0.75 + Math.random() * 0.5);
+    // Progression du hold (photo_groupe) — indépendante du minuteur de
+    // fenêtre ci-dessus, incrémentée en continu tant que le doigt reste
+    // posé sur la carte ; la réussite se déclenche dès que le seuil est
+    // atteint, sans attendre un pointerup (cf. startHold()).
+    if (game.holdState){
+      var heldMs = now - game.holdState.startTime;
+      var holdFrac = Math.min(1, heldMs / game.holdState.thresholdMs);
+      game.holdState.ringFill.style.strokeDashoffset = (RING_CIRC * (1 - holdFrac)).toFixed(1);
+      if (holdFrac >= 1){
+        game.holdState = null;
+        cardInteractionSuccess();
+      }
+    }
+
+    // Distraction type C (le verre bouge) — scheduleTypeC() choisit laquelle
+    // parmi celles débloquées à la phase courante (chacune filtre déjà sur
+    // son propre phaseMin, cf. scheduleTypeC()) ; typeCIntervalMs vaut 99999
+    // en phase 'confiance', donc rien ne se déclenche avant 'montee'.
+    game.typeCTimer -= dt;
+    if (game.typeCTimer <= 0){
+      scheduleTypeC();
+      game.typeCTimer = phase.typeCIntervalMs * (0.75 + Math.random() * 0.5);
     }
 
     elTimer.textContent = fmtScoreFr(game.elapsedMs);
@@ -1821,18 +2498,26 @@
     requestAnimationFrame(loop);
   }
 
+  // Désactivée à la demande de Sam : les yeux de la mascotte ne doivent
+  // jamais bouger de leur position d'origine, quoi qu'il se passe à l'écran
+  // pendant la partie (ils suivaient auparavant la carte de distraction
+  // active — code conservé en commentaire plus bas si on veut le
+  // réactiver un jour).
   function updatePupilLook(){
-    if (!game.activeCard){ elPupilles.style.transform = ''; return; }
-    var cardRect = game.activeCard.el.getBoundingClientRect();
-    var verreRect = elVerreAnim.getBoundingClientRect();
-    var vcx = verreRect.left + verreRect.width / 2;
-    var vcy = verreRect.top + verreRect.height / 2;
-    var ccx = cardRect.left + cardRect.width / 2;
-    var ccy = cardRect.top + cardRect.height / 2;
-    var dx = Math.max(-1, Math.min(1, (ccx - vcx) / 160));
-    var dy = Math.max(-1, Math.min(1, (ccy - vcy) / 160));
-    elPupilles.style.transform = 'translate(' + (dx * 2.2).toFixed(2) + 'px,' + (dy * 2.2).toFixed(2) + 'px)';
+    elPupilles.style.transform = '';
   }
+  // function updatePupilLook(){
+  //   if (!game.activeCard){ elPupilles.style.transform = ''; return; }
+  //   var cardRect = game.activeCard.el.getBoundingClientRect();
+  //   var verreRect = elVerreAnim.getBoundingClientRect();
+  //   var vcx = verreRect.left + verreRect.width / 2;
+  //   var vcy = verreRect.top + verreRect.height / 2;
+  //   var ccx = cardRect.left + cardRect.width / 2;
+  //   var ccy = cardRect.top + cardRect.height / 2;
+  //   var dx = Math.max(-1, Math.min(1, (ccx - vcx) / 160));
+  //   var dy = Math.max(-1, Math.min(1, (ccy - vcy) / 160));
+  //   elPupilles.style.transform = 'translate(' + (dx * 2.2).toFixed(2) + 'px,' + (dy * 2.2).toFixed(2) + 'px)';
+  // }
 
   /* ---- Cartes type A / B ---- */
   function spawnCard(phase){
@@ -1841,35 +2526,21 @@
     var def = weightedPick(pool);
     var copy = COPY.distractions[def.id];
 
-    var el = (def.id === 'pote_appelle') ? buildCallBanner(copy)
-      : (def.id === 'commande_prete') ? buildOrderCard(copy)
-      : buildCard(def, copy);
+    // pote_appelle garde son propre écran d'appel ; toutes les autres
+    // distractions A/B passent par la recette générique buildOrderCard()
+    // (voir DISTRACTIONS pour icon/accent/avatar/interaction par entrée).
+    var el = (def.id === 'pote_appelle') ? buildCallBanner(copy) : buildOrderCard(def, copy);
 
     elCardZone.innerHTML = '';
     elCardZone.appendChild(el);
 
-    game.activeCard = { def: def, remainingMs: def.fenetreMs, el: el };
-  }
-
-  function buildCard(def, copy){
-    var el = document.createElement('div');
-    el.className = 'lp-card';
-    var texte = document.createElement('p');
-    texte.className = 'lp-card__texte';
-    texte.textContent = copy.texte;
-    el.appendChild(texte);
-    if (def.type === 'A'){
-      var label = document.createElement('span');
-      label.className = 'lp-card__label';
-      label.textContent = copy.label;
-      el.appendChild(label);
-    }
-    return el;
+    game.activeCard = { def: def, remainingMs: def.fenetreMs, el: el, lastTapTime: 0 };
   }
 
   // Écran d'appel entrant façon iPhone (voir .lp-call) : tap n'importe où sur
-  // la bannière = répondre, même logique de détection que .lp-card plus haut
-  // (game.activeCard.el.contains(e.target)) — pas de handleCardTap à dupliquer.
+  // la bannière = répondre, même logique de détection que buildOrderCard()
+  // plus bas (game.activeCard.el.contains(e.target)) — pas de handleCardTap
+  // à dupliquer.
   function buildCallBanner(copy){
     var el = document.createElement('div');
     el.className = 'lp-call';
@@ -1901,18 +2572,27 @@
     return el;
   }
 
-  // Fiche « commande prête » (voir .lp-order) : même schéma icône + texte +
-  // action que buildCallBanner() ci-dessus, mais ancrée en bas (#card-zone,
-  // pas de position:fixed) — tap n'importe où = récupérer, même détection
-  // générique que les autres cartes (game.activeCard.el.contains(e.target)).
-  function buildOrderCard(copy){
+  // Recette générique (voir .lp-order) : icône/avatar + texte + action,
+  // réutilisée par toutes les distractions A/B sauf pote_appelle — tap
+  // n'importe où = interagir, même détection générique que les autres
+  // cartes (game.activeCard.el.contains(e.target)). def porte icon/accent/
+  // avatar/interaction (voir DISTRACTIONS), copy porte le texte affiché.
+  var RING_R = 18;
+  var RING_CIRC = 2 * Math.PI * RING_R;
+  function buildOrderCard(def, copy){
     var el = document.createElement('div');
     el.className = 'lp-order';
+    if (def.accent) el.style.setProperty('--card-accent', def.accent);
 
     var icon = document.createElement('div');
     icon.className = 'lp-order__icon';
     icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = '🧾';
+    if (def.avatar){
+      icon.classList.add('is-avatar');
+      icon.textContent = (copy.nom || '?').charAt(0);
+    } else {
+      icon.textContent = def.icon || '🔔';
+    }
     el.appendChild(icon);
 
     var info = document.createElement('div');
@@ -1927,16 +2607,44 @@
     info.appendChild(sub);
     el.appendChild(info);
 
-    var action = document.createElement('span');
-    action.className = 'lp-order__action';
-    action.textContent = copy.label;
-    el.appendChild(action);
+    el.appendChild(buildActionElement(def, copy));
 
     return el;
   }
 
+  // L'action pilule standard devient un anneau (interaction "hold") ou un
+  // rail à glisser (interaction "slide") selon la distraction — la carcasse
+  // .lp-order reste identique, seule cette pastille change de forme.
+  function buildActionElement(def, copy){
+    if (def.interaction === 'hold'){
+      var ring = document.createElement('span');
+      ring.className = 'lp-order__action is-ring';
+      ring.innerHTML =
+        '<svg viewBox="0 0 44 44" aria-hidden="true">' +
+        '<circle class="ring-track" cx="22" cy="22" r="' + RING_R + '"/>' +
+        '<circle class="ring-fill" cx="22" cy="22" r="' + RING_R + '" ' +
+          'stroke-dasharray="' + RING_CIRC.toFixed(1) + '" stroke-dashoffset="' + RING_CIRC.toFixed(1) + '"/>' +
+        '</svg>';
+      return ring;
+    }
+    if (def.interaction === 'slide'){
+      var slider = document.createElement('span');
+      slider.className = 'lp-order__action is-slider';
+      var thumb = document.createElement('span');
+      thumb.className = 'slider-thumb';
+      thumb.setAttribute('aria-hidden', 'true');
+      thumb.textContent = copy.label || '→';
+      slider.appendChild(thumb);
+      return slider;
+    }
+    var action = document.createElement('span');
+    action.className = 'lp-order__action';
+    action.textContent = copy.label;
+    return action;
+  }
+
   // Sortie animée (fade + léger retrait vers le haut) plutôt qu'une
-  // suppression instantanée — symétrique de card-in à l'entrée. Le
+  // suppression instantanée — symétrique de order-up/call-drop à l'entrée. Le
   // pointer-events:none de .is-leaving évite qu'un tap pendant les ~150ms de
   // sortie ne retombe par erreur sur une carte en train de disparaître.
   var CARD_LEAVE_MS = 150;
@@ -1949,22 +2657,125 @@
       }, reducedFx ? 20 : CARD_LEAVE_MS);
     }
     game.activeCard = null;
+    game.holdState = null;
+    game.slideState = null;
     elPupilles.style.transform = '';
+  }
+
+  // Complétion réussie d'une distraction de type A, quel que soit le geste
+  // (tap simple, double-tap, hold, slide) — toutes convergent ici.
+  function cardInteractionSuccess(){
+    vibrate(15);
+    removeCard();
+    var phase = currentPhase();
+    game.cardTimer = phase.cardIntervalMs * (0.75 + Math.random() * 0.5);
   }
 
   function handleCardTap(card){
     if (card.def.type === 'A'){
-      vibrate(15);
-      removeCard();
-      var phase = currentPhase();
-      game.cardTimer = phase.cardIntervalMs * (0.75 + Math.random() * 0.5);
+      cardInteractionSuccess();
     } else {
       endGame('leurre', card.def.id);
     }
   }
 
-  /* ---- Distraction type C : bousculade ---- */
+  // Double-tap (drop_arrive) : deux pointerdown sur la carte à moins de
+  // 450ms d'écart. Le 1er tap n'a aucun effet de jeu, juste un accusé de
+  // réception visuel (is-tap-pulse) — sans ça rien ne confirmerait au
+  // joueur que son 1er tap a bien été pris en compte.
+  var DOUBLETAP_MS = 450;
+  function handleDoubleTap(card, e){
+    var now = e.timeStamp;
+    if (card.lastTapTime && (now - card.lastTapTime) <= DOUBLETAP_MS){
+      cardInteractionSuccess();
+      return;
+    }
+    card.lastTapTime = now;
+    card.el.classList.remove('is-tap-pulse');
+    void card.el.offsetWidth; // force le reflow pour rejouer le pulse
+    card.el.classList.add('is-tap-pulse');
+    vibrate(8);
+  }
+
+  // Hold (photo_groupe) : le doigt quitte le verre pour rester posé sur la
+  // carte — la progression est mise à jour à chaque frame dans loop() (pas
+  // ici), la réussite se déclenche dès que le seuil est atteint même si le
+  // doigt est encore posé (pas besoin d'attendre un pointerup).
+  function startHold(card, e){
+    var ringFill = card.el.querySelector('.ring-fill');
+    game.holdState = {
+      pointerId: e.pointerId,
+      startTime: performance.now(),
+      thresholdMs: card.def.holdMs || 1000,
+      ringFill: ringFill
+    };
+    try { card.el.setPointerCapture(e.pointerId); } catch(err){ /* ignore */ }
+  }
+  // Relâché avant le seuil : on remet juste l'anneau à zéro, la fenêtre de
+  // la carte continue de courir (le joueur peut retenter), pas d'échec
+  // immédiat — cf. le comportement d'un vrai bouton à appui long.
+  function cancelHold(){
+    if (game.holdState && game.holdState.ringFill){
+      game.holdState.ringFill.style.strokeDashoffset = RING_CIRC.toFixed(1);
+    }
+    game.holdState = null;
+  }
+
+  // Slide (story_poster) : le pouce fait glisser le curseur jusqu'à ~88% du
+  // rail pour valider — mêmes principes que le hold (relâcher avant la fin
+  // = juste un reset, pas un échec).
+  var SLIDE_SUCCESS_FRAC = 0.88;
+  function startSlide(card, e){
+    var track = card.el.querySelector('.lp-order__action.is-slider');
+    var thumb = track.querySelector('.slider-thumb');
+    var trackRect = track.getBoundingClientRect();
+    var maxOffset = Math.max(1, trackRect.width - thumb.offsetWidth - 4);
+    game.slideState = { pointerId: e.pointerId, startX: e.clientX, thumb: thumb, maxOffset: maxOffset, done: false };
+    try { card.el.setPointerCapture(e.pointerId); } catch(err){ /* ignore */ }
+  }
+  function updateSlide(e){
+    var st = game.slideState;
+    if (!st || st.done) return;
+    var dx = Math.max(0, Math.min(st.maxOffset, e.clientX - st.startX));
+    st.thumb.style.left = (2 + dx) + 'px';
+    if (dx >= st.maxOffset * SLIDE_SUCCESS_FRAC){
+      st.done = true;
+      game.slideState = null;
+      cardInteractionSuccess();
+    }
+  }
+  function cancelSlide(){
+    if (game.slideState && !game.slideState.done){
+      game.slideState.thumb.style.left = '2px';
+    }
+    game.slideState = null;
+  }
+
+  /* ---- Distraction type C : le verre bouge ----
+     scheduleTypeC() choisit, parmi les distractions de type C débloquées à
+     la phase courante, laquelle déclencher (même logique de tirage pondéré
+     que spawnCard() pour les cartes A/B) — bousculade n'est plus la seule. */
+  function scheduleTypeC(){
+    var pool = DISTRACTIONS.filter(function(d){ return d.type === 'C' && phaseUnlocked(d.phaseMin); });
+    if (!pool.length) return;
+    var def = weightedPick(pool);
+    if (def.id === 'bousculade') triggerBousculade();
+    else if (def.id === 'basses') triggerBasses();
+    else if (def.id === 'derive') triggerDerive();
+    else if (def.id === 'rotation') triggerRotation();
+  }
+
+  // Les 4 effets type C partagent la même couche #verre-anim : on repart
+  // toujours d'un état propre (classes + transform inline) avant d'en
+  // appliquer un nouveau, pour ne jamais hériter d'un transform laissé par
+  // le précédent (notamment is-derive, qui pose un transform inline).
+  function resetVerreMotion(){
+    elVerreAnim.classList.remove('is-bousculade', 'is-basses', 'is-derive', 'is-rotation');
+    elVerreAnim.style.transform = '';
+  }
+
   function triggerBousculade(){
+    resetVerreMotion();
     var min = CONFIG.BOUSCULADE_PX[0], max = CONFIG.BOUSCULADE_PX[1];
     var dx = (min + Math.random() * (max - min)) * (Math.random() < 0.5 ? -1 : 1);
     var dy = (min * 0.4 + Math.random() * (max - min) * 0.4) * (Math.random() < 0.5 ? -1 : 1);
@@ -1972,12 +2783,44 @@
     elVerreAnim.style.setProperty('--vx', dx.toFixed(1) + 'px');
     elVerreAnim.style.setProperty('--vy', dy.toFixed(1) + 'px');
     elVerreAnim.style.setProperty('--vr', rot.toFixed(1) + 'deg');
-    elVerreAnim.classList.remove('is-bousculade');
     void elVerreAnim.offsetWidth; // force le reflow pour rejouer l'animation
     elVerreAnim.classList.add('is-bousculade');
+    flashVieBar();
+  }
 
-    // Flash bref de la barre de vie, synchronisé au shake, pour que le
-    // danger se ressente même sans regarder le verre directement.
+  function triggerBasses(){
+    resetVerreMotion();
+    void elVerreAnim.offsetWidth;
+    elVerreAnim.classList.add('is-basses');
+    setTimeout(function(){ elVerreAnim.classList.remove('is-basses'); }, reducedFx ? 200 : CONFIG.BASSES_MS);
+  }
+
+  function triggerDerive(){
+    resetVerreMotion();
+    var min = CONFIG.DERIVE_PX[0], max = CONFIG.DERIVE_PX[1];
+    var dx = (min + Math.random() * (max - min)) * (Math.random() < 0.5 ? -1 : 1);
+    var dy = (min * 0.6 + Math.random() * (max - min) * 0.6) * (Math.random() < 0.5 ? -1 : 1);
+    var transMs = reducedFx ? 400 : CONFIG.DERIVE_TRANSITION_MS;
+    elVerreAnim.style.setProperty('--derive-ms', transMs + 'ms');
+    elVerreAnim.classList.add('is-derive');
+    void elVerreAnim.offsetWidth;
+    elVerreAnim.style.transform = 'translate(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px)';
+    setTimeout(function(){
+      elVerreAnim.style.transform = '';
+      setTimeout(function(){ elVerreAnim.classList.remove('is-derive'); }, transMs);
+    }, reducedFx ? 200 : CONFIG.DERIVE_HOLD_MS);
+  }
+
+  function triggerRotation(){
+    resetVerreMotion();
+    void elVerreAnim.offsetWidth;
+    elVerreAnim.classList.add('is-rotation');
+  }
+
+  // Flash bref de la barre de vie (partagé par les effets type C les plus
+  // brusques), pour que le danger se ressente même sans regarder le verre
+  // directement.
+  function flashVieBar(){
     elVieBarFill.classList.remove('is-flash');
     void elVieBarFill.offsetWidth;
     elVieBarFill.classList.add('is-flash');
@@ -2010,6 +2853,32 @@
     elCardZone.innerHTML = '';
 
     var scoreMs = (cause === 'cap') ? CONFIG.CAP_MS : game.elapsedMs;
+
+    // Meilleur temps local (lp_best_score_ms) — affiché dans l'en-tête accueil
+    // (voir updatePlayerHeader()) si un @ a été renseigné. Purement local à
+    // cet appareil, indépendant de ce qui part vers Firebase juste après.
+    var prevBestMs = 0;
+    try { prevBestMs = parseInt(localStorage.getItem('lp_best_score_ms') || '0', 10) || 0; } catch(e){}
+    if (scoreMs > prevBestMs){
+      try { localStorage.setItem('lp_best_score_ms', String(Math.round(scoreMs))); } catch(e){}
+    }
+
+    // Enregistrement de la partie (voir le bloc ENREGISTREMENT DES PARTIES
+    // plus haut) — computeStats() est pure et sans effet de bord, on peut se
+    // permettre de l'appeler ici en plus de runRevelation() sans dupliquer
+    // de logique de calcul.
+    var percentileTop = computeStats(scoreMs).top;
+    queueRun({
+      handle: getHandle(),
+      scoreMs: scoreMs,
+      cause: cause,
+      distractionId: distractionId || null,
+      percentileShown: percentileTop,
+      clientId: getClientId(),
+      gameVersion: GAME_VERSION,
+      festivalId: getActiveFestivalId()
+    });
+
     runRevelation(scoreMs, cause);
   }
 
@@ -2043,6 +2912,7 @@
   // 3 = temps 4 affiché (écran final, seul le bouton Rejouer agit).
   var revelationStep = 0;
   var revelationScoreMs = 0;
+  var revelationPercentileTop = 0; // posé au temps 3 (voir advanceRevelation()), réutilisé par shareScore()
 
   function runRevelation(scoreMs, cause){
     showScreen('revelation');
@@ -2067,7 +2937,7 @@
       // Message spécifique à la distraction ratée si prévu (COPY.distractions[id].rate),
       // sinon le message générique de la cause.
       var causeCopy = COPY.causes[cause] || '';
-      if (cause === 'action_ratee' && game.causeDistraction){
+      if ((cause === 'action_ratee' || cause === 'leurre') && game.causeDistraction){
         var distCopy = COPY.distractions[game.causeDistraction];
         if (distCopy && distCopy.rate) causeCopy = distCopy.rate;
       }
@@ -2085,6 +2955,7 @@
 
       // Temps 3 — la validation (flatter avant de faire tomber)
       var stats = computeStats(revelationScoreMs);
+      revelationPercentileTop = stats.top;
       animateCount($('rv-validation-nb'), stats.top, reducedFx ? 0 : 600, function(v){ return 'Top ' + v + ' %'; });
       $('rv-validation-sub').textContent = 'Moyenne des joueurs : ' + stats.moyenneSec + ' s.';
       $('rv-temps-3').classList.add('is-visible');
@@ -2123,12 +2994,44 @@
     goToPret();
   });
 
+  // « Retour au menu » : ramène à l'accueil plutôt qu'à l'écran d'attente
+  // (contrairement à Rejouer) — pour un joueur qui veut s'arrêter là plutôt
+  // qu'enchaîner une partie.
+  elBtnRetourMenu.addEventListener('pointerup', function(){
+    if (game.state !== STATE.REVELATION) return;
+    elVerreScale.style.transition = '';
+    elVerreScale.style.transform = '';
+    goToAccueil();
+  });
+
   /* ============================================================================
      BOOT
      ============================================================================ */
   boot();
 
 })();
+</script>
+<!-- Enregistrement des parties (Firebase) : fichiers séparés du script
+     ci-dessus, chargés indépendamment — voir lp-firebase.js pour le pourquoi
+     du découplage. L'ordre de ces deux balises n'a pas d'importance (module
+     = différé de toute façon), lp-firebase-config.js doit juste être présent
+     avant que lp-firebase.js ne s'exécute, ce que garantit l'ordre ci-dessous. -->
+<script src="lp-firebase-config.js"></script>
+<script type="module" src="lp-firebase.js"></script>
+
+<!-- PWA — service worker propre au jeu (voir lp-sw.js pour la règle de
+     sécurité : il n'intercepte jamais rien en dehors des fichiers du jeu,
+     jamais index.html ni le reste du site). Enregistré après le chargement
+     complet de la page pour ne jamais retarder le 1er affichage du jeu. -->
+<script>
+  if ('serviceWorker' in navigator){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('lp-sw.js').catch(function(){
+        /* PWA non disponible (navigateur trop ancien, contexte non sécurisé
+           en test local...) : le jeu reste jouable à l'identique en ligne. */
+      });
+    });
+  }
 </script>
 </body>
 </html>
