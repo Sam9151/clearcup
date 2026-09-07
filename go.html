@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="fr-CH">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>ClearCup — Liens</title>
+<meta name="description" content="Tous les liens ClearCup au même endroit.">
+<!-- noindex : page pensée pour la bio Instagram / un QR code, pas pour la
+     recherche Google (choix explicite de Sam, 07.09.2026) — "follow" laissé
+     pour ne pas empêcher un moteur de suivre les liens listés eux-mêmes. -->
+<meta name="robots" content="noindex, follow">
+<link rel="canonical" href="https://clearcup.ch/go.html">
+
+<!-- Open Graph minimal : juste pour un aperçu correct si le lien est partagé
+     ailleurs que dans la bio (ex. story, message) — pas d'objectif SEO ici. -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://clearcup.ch/go.html">
+<meta property="og:title" content="ClearCup — Liens">
+<meta property="og:description" content="Tous les liens ClearCup au même endroit.">
+<meta property="og:image" content="https://clearcup.ch/assets/og-image.webp">
+<meta property="og:locale" content="fr_CH">
+
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon_32.png">
+<link rel="apple-touch-icon" sizes="180x180" href="assets/favicon-180.png">
+
+<!--
+  ============================================================================
+  GO.HTML — page "liens en bio" publique (façon Linktree), créée le
+  07.09.2026 pour la bio Instagram et un QR code. Fichier unique, pas de
+  build step, même philosophie que game.html/stats.html — mais comme
+  stats.html, elle parle DIRECTEMENT à Firebase (pas de file d'attente
+  hors-ligne : ça n'a pas de sens pour une simple liste de liens en lecture).
+
+  Les liens (texte + URL + ordre) sont stockés dans Firebase Realtime
+  Database, nœud "goLinks" — voir cc-9f3k2.html pour l'admin qui les
+  gère et pour les règles de sécurité complètes (documentées là-bas,
+  puisque c'est le fichier qui écrit). Cette page ne fait que LIRE, en
+  temps réel (onValue) : un changement fait depuis l'admin apparaît ici
+  sans redéploiement, exactement comme le classement de stats.html.
+
+  Réutilise le même projet Firebase que le jeu "Lâche pas"
+  (lp-firebase-config.js, window.LP_FIREBASE_CONFIG) — décision explicite
+  de Sam plutôt qu'un projet séparé : les liens vivent dans un nœud dédié
+  ("goLinks"), aucun mélange possible avec "runs"/"festivals". Le nom du
+  fichier de config garde son historique ("lp" = Lâche Pas) mais héberge
+  maintenant la config Firebase commune aux deux usages.
+
+  Le bouton Instagram tout en bas n'est PAS dans Firebase (demande
+  explicite de Sam — "séparé" du reste) : il est codé en dur ci-dessous,
+  avec la même icône/le même lien que sur le reste du site (voir le pied
+  de page d'index.html) pour rester cohérent.
+  ============================================================================
+-->
+
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --white:#FFFFFF;
+    --ink:#0A0A0A;
+    --blue:#64A4F6;
+    --border:2px solid var(--ink);
+    --radius:16px;
+    --shadow:4px 4px 0 var(--ink);
+    --font-title:'Bagel Fat One', system-ui, -apple-system, sans-serif;
+    --font-body:'Arimo', system-ui, -apple-system, sans-serif;
+  }
+  /* Mêmes fichiers de police que stats.html (sous-ensemble léger du jeu,
+     pas les polices complètes des pages marketing) — le texte du jeu est
+     déjà entièrement en français accentué, ce sous-ensemble couvre donc
+     largement les libellés de liens qu'on y mettra. */
+  @font-face{
+    font-family:'Bagel Fat One';
+    src:url('fonts/lp-bagel-fat-one.woff2') format('woff2');
+    font-weight:400; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:'Arimo';
+    src:url('fonts/lp-arimo.woff2') format('woff2');
+    font-weight:100 900; font-style:normal; font-display:swap;
+  }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:var(--white);
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:420px;
+    margin:0 auto;
+    padding:max(2.5rem, env(safe-area-inset-top)) 1.5rem max(2.5rem, env(safe-area-inset-bottom));
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+  }
+  /* Fond blanc obligatoire ici : LOGO_CC_MAIN.svg utilise des remplissages
+     blancs pensés pour se fondre avec la page (vérifié dans le fichier
+     source) — sur un autre fond, ces zones resteraient visibles et le logo
+     serait mal rendu. */
+  .logo{
+    width:clamp(140px, 42vw, 200px);
+    height:auto;
+    display:block;
+    margin-bottom:1.25rem;
+  }
+  .tagline{
+    text-align:center;
+    font-size:.95rem;
+    line-height:1.5;
+    color:rgba(10,10,10,.75);
+    max-width:32ch;
+    margin:0 0 2rem;
+  }
+  .links-list{
+    width:100%;
+    display:flex;
+    flex-direction:column;
+    gap:.9rem;
+  }
+  .link-btn{
+    display:block;
+    width:100%;
+    font-family:var(--font-title);
+    font-weight:400;
+    font-size:1.05rem;
+    text-transform:uppercase;
+    letter-spacing:.02em;
+    text-align:center;
+    text-decoration:none;
+    color:var(--ink);
+    background:var(--white);
+    border:var(--border);
+    border-radius:999px;
+    padding:1rem 1.5rem;
+    box-shadow:var(--shadow);
+    transition:transform 120ms ease, box-shadow 120ms ease;
+  }
+  .link-btn:active{ transform:translate(3px,3px); box-shadow:none; }
+  .empty-note{
+    text-align:center;
+    font-size:.9rem;
+    color:rgba(10,10,10,.5);
+  }
+  .insta-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:3rem;
+    height:3rem;
+    margin-top:2.5rem;
+    border:var(--border);
+    border-radius:50%;
+    background:var(--white);
+    color:var(--ink);
+    box-shadow:3px 3px 0 var(--ink);
+    transition:transform 120ms ease, box-shadow 120ms ease;
+  }
+  .insta-btn:active{ transform:translate(2px,2px); box-shadow:none; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <img class="logo" src="assets-game/LOGO_CC_MAIN.svg" alt="ClearCup" width="200" height="70">
+
+  <p class="tagline">Sticker anti-soumission chimique pour vos verres — simple, discret, efficace.</p>
+
+  <div class="links-list" id="links-list">
+    <p class="empty-note">Chargement…</p>
+  </div>
+
+  <!-- Séparé de la liste dynamique — voir commentaire d'en-tête. Même
+       recette (icône + lien) que le reste du site, ex. index.html. -->
+  <a class="insta-btn" href="https://instagram.com/clearcup.ch" target="_blank" rel="noopener noreferrer me" aria-label="Instagram @clearcup.ch">
+    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
+      <circle cx="12" cy="12" r="4"/>
+      <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
+    </svg>
+  </a>
+</div>
+
+<script src="lp-firebase-config.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+
+function $(id){ return document.getElementById(id); }
+
+// Échappement HTML — "goLinks" est modifiable uniquement par un admin
+// authentifié (voir cc-9f3k2.html/règles Firebase), mais on applique quand
+// même l'échappement par principe de défense en profondeur (même réflexe
+// que stats.html depuis la faille XSS corrigée le 07.09.2026 : une donnée
+// Firebase, même admin-only, ne doit jamais partir telle quelle dans
+// innerHTML).
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+function renderLinks(links){
+  if (!links.length){
+    $('links-list').innerHTML = '<p class="empty-note">Aucun lien pour l’instant.</p>';
+    return;
+  }
+  $('links-list').innerHTML = links.map(function(l){
+    return '<a class="link-btn" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+      escapeHtml(l.label) + '</a>';
+  }).join('');
+}
+
+if (!window.LP_FIREBASE_CONFIG){
+  $('links-list').innerHTML = '<p class="empty-note">Configuration Firebase introuvable.</p>';
+} else {
+  var app = initializeApp(window.LP_FIREBASE_CONFIG);
+  var db = getDatabase(app);
+
+  // Temps réel : un lien ajouté/modifié/supprimé/réordonné depuis
+  // cc-9f3k2.html apparaît ici sans recharger la page, exigence explicite
+  // de Sam.
+  onValue(ref(db, 'goLinks'), function(snap){
+    var obj = snap.exists() ? snap.val() : {};
+    var links = Object.keys(obj).map(function(id){
+      var l = obj[id];
+      l.id = id;
+      return l;
+    }).sort(function(a, b){ return (a.order || 0) - (b.order || 0); });
+    renderLinks(links);
+  }, function(err){
+    console.warn('[go] lecture des liens impossible :', err && err.message);
+    $('links-list').innerHTML = '<p class="empty-note">Liens temporairement indisponibles.</p>';
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ClearCup — Admin liens</title>
+
+<!--
+  ============================================================================
+  CC-9F3K2.HTML — admin pour les liens de go.html, créé le 07.09.2026.
+  Fichier unique, pas de build step, même famille que stats.html (parle
+  DIRECTEMENT à Firebase Auth + Realtime Database, pas de file d'attente
+  hors-ligne — ça n'a pas de sens pour un outil admin).
+
+  DIFFÉRENCE VOLONTAIRE avec stats.html (07.09.2026, lecture publique) :
+  ICI, rien n'est public. La lecture des liens elle-même est publique côté
+  RÈGLES Firebase (obligatoire pour que go.html fonctionne sans connexion),
+  mais CETTE page n'a aucune raison d'afficher quoi que ce soit avant
+  connexion — c'est un outil de gestion, pas un écran à diffuser. Donc :
+  page de connexion plein écran bloquante (comme l'ANCIENNE version de
+  stats.html), et surtout la liste des liens n'est même écoutée
+  (onValue) qu'UNE FOIS connecté — voir onAuthStateChanged() plus bas.
+  Rien de "sensible" n'est réellement caché dans l'absolu (du JS
+  client est toujours lisible par quiconque ouvre les outils de dev,
+  comme n'importe quelle appli Firebase — voir la note Meta Pixel/API
+  keys de la session), mais aucune interface ni aucune donnée n'apparaît
+  tant qu'on n'est pas connecté, demande explicite de Sam.
+
+  Sécurité réelle (celle qui compte, pas l'apparence) : les RÈGLES
+  Realtime Database ci-dessous, à coller dans la console Firebase
+  (Realtime Database → Règles). Le nœud "goLinks" doit cohabiter avec
+  "runs"/"festivals"/"activeFestivalId" (voir lp-firebase.js) — règle du
+  jeu inchangée, on ajoute juste "goLinks" au même objet "rules".
+
+  {
+    "goLinks": {
+      ".read": true,
+      ".write": "auth != null",
+      "$linkId": {
+        ".validate": "newData.hasChildren(['label','url','order','createdAt'])",
+        "label": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 60" },
+        "url": { ".validate": "newData.isString() && newData.val().length <= 500 && (newData.val().beginsWith('https://') || newData.val().beginsWith('mailto:') || newData.val().beginsWith('tel:'))" },
+        "order": { ".validate": "newData.isNumber()" },
+        "createdAt": { ".validate": "newData.val() == now" },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+
+  ".read": true — nécessaire pour que go.html affiche les liens sans
+  connexion (choix explicite de Sam, même logique que "festivals"/"runs"
+  dans stats.html). ".write": "auth != null" — seule vraie barrière contre
+  une modification par quelqu'un d'autre que Sam/Yoann, peu importe ce que
+  cette page affiche ou cache. "url" limité à https:// / mailto: / tel:
+  (choix explicite de Sam) : un lien d'un autre type est refusé par
+  Firebase, pas seulement par ce formulaire.
+
+  Renommer/modifier un lien passe par update() sur "label"/"url"
+  uniquement (jamais "createdAt", donc jamais revalidé — même logique que
+  le renommage de festival dans stats.html). Réordonner passe par un
+  update() multi-chemins sur "order" uniquement, entre les deux liens
+  échangés (voir moveLink()) — jamais de renumérotation complète de la
+  liste, donc jamais de risque de casser un autre lien pendant l'opération.
+
+  Même projet Firebase que le jeu (lp-firebase-config.js) — décision
+  explicite de Sam. Ton compte admin existant (celui de stats.html)
+  fonctionne donc directement ici ; seul celui de Yoann reste à créer
+  (marche à suivre donnée séparément).
+  ============================================================================
+-->
+
+<style>
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root{
+    --white:#FFFFFF;
+    --ink:#0A0A0A;
+    --blue:#64A4F6;
+    --border:2px solid var(--ink);
+    --radius:16px;
+    --shadow:4px 4px 0 var(--ink);
+    --font-title:'Bagel Fat One', system-ui, -apple-system, sans-serif;
+    --font-body:'Arimo', system-ui, -apple-system, sans-serif;
+  }
+  @font-face{
+    font-family:'Bagel Fat One';
+    src:url('fonts/lp-bagel-fat-one.woff2') format('woff2');
+    font-weight:400; font-style:normal; font-display:swap;
+  }
+  @font-face{
+    font-family:'Arimo';
+    src:url('fonts/lp-arimo.woff2') format('woff2');
+    font-weight:100 900; font-style:normal; font-display:swap;
+  }
+  html,body{ margin:0; padding:0; }
+  body{
+    font-family:var(--font-body);
+    color:var(--ink);
+    background:#F2F5FB;
+    min-height:100vh;
+  }
+  h1,h2{ font-family:var(--font-title); font-weight:400; margin:0; }
+  .wrap{ max-width:640px; margin:0 auto; padding:1.5rem 1.25rem 4rem; }
+
+  .card{
+    background:var(--white);
+    border:var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:1.25rem;
+    margin-bottom:1.25rem;
+  }
+  .btn{
+    font-family:var(--font-body);
+    font-weight:700;
+    font-size:.95rem;
+    color:var(--white);
+    background:var(--blue);
+    border:var(--border);
+    border-radius:999px;
+    padding:.65rem 1.4rem;
+    cursor:pointer;
+    box-shadow:3px 3px 0 var(--ink);
+  }
+  .btn:active{ transform:translate(2px,2px); box-shadow:none; }
+  .btn--white{ background:var(--white); color:var(--ink); }
+  .btn--sm{ font-size:.8rem; padding:.4rem .9rem; box-shadow:2px 2px 0 var(--ink); }
+  .btn--icon{ padding:.4rem .6rem; }
+  .btn:disabled{ opacity:.45; cursor:default; pointer-events:none; }
+
+  input[type="email"], input[type="password"], input[type="text"], input[type="url"]{
+    font-family:var(--font-body);
+    font-size:1rem;
+    padding:.6rem .8rem;
+    border:var(--border);
+    border-radius:12px;
+    width:100%;
+    background:var(--white);
+    color:var(--ink);
+  }
+
+  /* ---- Connexion : page plein écran bloquante (voir commentaire d'en-tête
+     sur la différence volontaire avec stats.html) ---- */
+  #view-login{
+    min-height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    padding:1.5rem;
+  }
+  #view-login .card{ width:100%; max-width:360px; margin:0; }
+  #view-login h1{ font-size:1.6rem; margin-bottom:1.25rem; text-align:center; }
+  #view-login label{ display:block; font-size:.85rem; font-weight:700; margin:.9rem 0 .3rem; }
+  #login-error{ color:#C0392B; font-size:.85rem; margin-top:.8rem; min-height:1.2em; }
+  #btn-login{ width:100%; margin-top:1.3rem; }
+
+  /* ---- Dashboard : n'existe visuellement qu'après connexion ---- */
+  #view-dashboard{ display:none; }
+  header.top{
+    display:flex; align-items:center; justify-content:space-between; gap:1rem;
+    margin-bottom:1.25rem; flex-wrap:wrap;
+  }
+  header.top h1{ font-size:1.5rem; }
+
+  #banner-error{
+    display:none;
+    background:#FDECEA; color:#C0392B; border:1.5px solid #C0392B;
+    border-radius:12px; padding:.8rem 1rem; margin-bottom:1.25rem;
+    font-size:.85rem;
+  }
+
+  .link-row{
+    display:flex; align-items:center; justify-content:space-between; gap:.75rem;
+    padding:.7rem 0;
+    border-bottom:1px solid rgba(10,10,10,.1);
+  }
+  .link-row:last-child{ border-bottom:none; }
+  .link-row-text{ min-width:0; flex:1; }
+  .link-row-label{ font-weight:700; }
+  .link-row-url{
+    display:block;
+    font-size:.8rem;
+    color:rgba(10,10,10,.55);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .link-row-actions{ display:flex; gap:.35rem; align-items:center; flex-shrink:0; }
+
+  .new-link{ display:flex; flex-direction:column; gap:.6rem; margin-top:1rem; }
+  .new-link .btn{ align-self:flex-start; }
+
+  .empty-note{ font-size:.85rem; color:rgba(10,10,10,.5); }
+</style>
+</head>
+<body>
+
+<!-- ============ Connexion ============ -->
+<div id="view-login">
+  <div class="card">
+    <h1>ClearCup</h1>
+    <form id="form-login">
+      <label for="login-email">E-mail</label>
+      <input type="email" id="login-email" autocomplete="username" required>
+      <label for="login-password">Mot de passe</label>
+      <input type="password" id="login-password" autocomplete="current-password" required>
+      <p id="login-error"></p>
+      <button type="submit" class="btn" id="btn-login">Se connecter</button>
+    </form>
+  </div>
+</div>
+
+<!-- ============ Dashboard ============ -->
+<div id="view-dashboard">
+  <div class="wrap">
+    <header class="top">
+      <h1>Liens — go.html</h1>
+      <button type="button" class="btn btn--white btn--sm" id="btn-logout">Se déconnecter</button>
+    </header>
+
+    <p id="banner-error"></p>
+
+    <div class="card">
+      <h2 style="font-size:1.1rem; margin-bottom:.75rem;">Liens actuels</h2>
+      <div id="links-list"><p class="empty-note">Chargement…</p></div>
+
+      <form class="new-link" id="form-add-link">
+        <input type="text" id="input-new-label" placeholder="Texte du lien (ex : Notre boutique)" maxlength="60" required>
+        <input type="url" id="input-new-url" placeholder="https://…" maxlength="500" required>
+        <p id="add-link-error" style="color:#C0392B; font-size:.85rem; margin:0; min-height:1.2em;"></p>
+        <button type="submit" class="btn btn--sm">+ Ajouter</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="lp-firebase-config.js"></script>
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut }
+  from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
+import { getDatabase, ref, onValue, push, set, update, remove, serverTimestamp }
+  from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+
+function $(id){ return document.getElementById(id); }
+
+if (!window.LP_FIREBASE_CONFIG){
+  document.body.innerHTML = '<p style="padding:2rem;font-family:sans-serif;">lp-firebase-config.js absent — configuration Firebase introuvable.</p>';
+  throw new Error('LP_FIREBASE_CONFIG absent');
+}
+var app = initializeApp(window.LP_FIREBASE_CONFIG);
+var auth = getAuth(app);
+var db = getDatabase(app);
+
+// Échappement HTML — les liens sont admin-only en écriture, mais même
+// réflexe défense-en-profondeur que go.html/stats.html : jamais de donnée
+// Firebase directement dans innerHTML sans échappement.
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
+// Même restriction que la règle Firebase (".url".matches(...)) — vérifiée
+// aussi côté client pour un message d'erreur clair plutôt qu'un rejet
+// silencieux/technique venu du serveur.
+function isAllowedUrl(url){
+  return /^(https:\/\/|mailto:|tel:)/.test(url);
+}
+
+function showError(msg){
+  var el = $('banner-error');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
+
+/* ============================================================================
+   CONNEXION — page bloquante : voir commentaire d'en-tête sur la différence
+   volontaire avec stats.html. La liste des liens n'est écoutée qu'une fois
+   connecté (startListening()), rien n'est donc chargé ni affiché avant.
+   ============================================================================ */
+var state = { links: [] };
+var unsubscribeLinks = null;
+
+$('form-login').addEventListener('submit', function(e){
+  e.preventDefault();
+  $('login-error').textContent = '';
+  $('btn-login').disabled = true;
+  signInWithEmailAndPassword(auth, $('login-email').value.trim(), $('login-password').value)
+    .catch(function(err){
+      $('login-error').textContent = "Connexion impossible — vérifie l'e-mail et le mot de passe.";
+      console.warn('[cc-9f3k2] échec connexion', err);
+    })
+    .finally(function(){ $('btn-login').disabled = false; });
+});
+
+$('btn-logout').addEventListener('click', function(){ signOut(auth); });
+
+onAuthStateChanged(auth, function(user){
+  if (user){
+    $('view-login').style.display = 'none';
+    $('view-dashboard').style.display = 'block';
+    startListening();
+  } else {
+    $('view-dashboard').style.display = 'none';
+    $('view-login').style.display = 'flex';
+    stopListening();
+    state.links = [];
+  }
+});
+
+function startListening(){
+  if (unsubscribeLinks) return; // déjà démarré (ex: reconnexion sans reload de page)
+  unsubscribeLinks = onValue(ref(db, 'goLinks'), function(snap){
+    var obj = snap.exists() ? snap.val() : {};
+    state.links = Object.keys(obj).map(function(id){
+      var l = obj[id];
+      l.id = id;
+      return l;
+    }).sort(function(a, b){ return (a.order || 0) - (b.order || 0); });
+    renderLinks();
+    showError('');
+  }, function(err){
+    console.warn('[cc-9f3k2] lecture des liens impossible :', err && err.message);
+    showError('Connexion à Firebase perdue : ' + (err && err.message ? err.message : err));
+  });
+}
+function stopListening(){
+  if (unsubscribeLinks){ unsubscribeLinks(); unsubscribeLinks = null; }
+}
+
+/* ============================================================================
+   AJOUTER — le prochain "order" est max(existants)+1, ou 0 si la liste est
+   vide, pour que le nouveau lien apparaisse toujours en dernier (l'admin le
+   remonte ensuite avec ↑ si besoin).
+   ============================================================================ */
+$('form-add-link').addEventListener('submit', function(e){
+  e.preventDefault();
+  var label = $('input-new-label').value.trim();
+  var url = $('input-new-url').value.trim();
+  $('add-link-error').textContent = '';
+  if (!label || !url) return;
+  if (!isAllowedUrl(url)){
+    $('add-link-error').textContent = "L'URL doit commencer par https://, mailto: ou tel:";
+    return;
+  }
+  var nextOrder = state.links.length
+    ? Math.max.apply(null, state.links.map(function(l){ return l.order || 0; })) + 1
+    : 0;
+  var newRef = push(ref(db, 'goLinks'));
+  set(newRef, { label: label, url: url, order: nextOrder, createdAt: serverTimestamp() })
+    .then(function(){ $('form-add-link').reset(); })
+    .catch(function(err){ $('add-link-error').textContent = 'Ajout impossible : ' + (err && err.message ? err.message : err); });
+});
+
+/* ============================================================================
+   MODIFIER / SUPPRIMER — prompt() successifs, même recette que
+   renameFestival()/deleteFestival() dans stats.html (déjà validée par Sam) :
+   pas de formulaire d'édition inline séparé, moins de code pour un outil à
+   2 utilisateurs.
+   ============================================================================ */
+function editLink(id){
+  var link = state.links.filter(function(l){ return l.id === id; })[0];
+  if (!link) return;
+  var label = prompt('Texte du lien :', link.label);
+  if (label === null) return; // annulé
+  label = label.trim();
+  if (!label) return;
+  var url = prompt('URL du lien :', link.url);
+  if (url === null) return;
+  url = url.trim();
+  if (!url) return;
+  if (!isAllowedUrl(url)){
+    alert("L'URL doit commencer par https://, mailto: ou tel:");
+    return;
+  }
+  update(ref(db, 'goLinks/' + id), { label: label, url: url })
+    .catch(function(err){ alert('Modification impossible : ' + (err && err.message ? err.message : err)); });
+}
+
+function deleteLink(id){
+  var link = state.links.filter(function(l){ return l.id === id; })[0];
+  if (!confirm('Supprimer "' + (link ? link.label : 'ce lien') + '" ?')) return;
+  remove(ref(db, 'goLinks/' + id))
+    .catch(function(err){ alert('Suppression impossible : ' + (err && err.message ? err.message : err)); });
+}
+
+/* ============================================================================
+   RÉORDONNER — échange uniquement le champ "order" entre les deux liens
+   concernés (update() multi-chemins), jamais de renumérotation complète :
+   aucun risque de casser un lien qui ne bouge pas si l'opération échoue à
+   mi-chemin (Firebase applique un update() multi-chemins de façon atomique).
+   ============================================================================ */
+function moveLink(id, direction){
+  var idx = state.links.findIndex(function(l){ return l.id === id; });
+  var swapIdx = idx + direction;
+  if (idx === -1 || swapIdx < 0 || swapIdx >= state.links.length) return;
+  var a = state.links[idx];
+  var b = state.links[swapIdx];
+  var updates = {};
+  updates['goLinks/' + a.id + '/order'] = b.order || 0;
+  updates['goLinks/' + b.id + '/order'] = a.order || 0;
+  update(ref(db), updates)
+    .catch(function(err){ alert('Réordonnancement impossible : ' + (err && err.message ? err.message : err)); });
+}
+
+/* ============================================================================
+   AFFICHAGE
+   ============================================================================ */
+function renderLinks(){
+  if (!state.links.length){
+    $('links-list').innerHTML = '<p class="empty-note">Aucun lien pour l’instant — ajoute-en un ci-dessous.</p>';
+    return;
+  }
+  $('links-list').innerHTML = state.links.map(function(l, i){
+    return '<div class="link-row">' +
+      '<div class="link-row-text">' +
+        '<div class="link-row-label">' + escapeHtml(l.label) + '</div>' +
+        '<span class="link-row-url">' + escapeHtml(l.url) + '</span>' +
+      '</div>' +
+      '<div class="link-row-actions">' +
+        (i > 0 ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-up="' + l.id + '" aria-label="Monter">↑</button>' : '') +
+        (i < state.links.length - 1 ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-down="' + l.id + '" aria-label="Descendre">↓</button>' : '') +
+        '<button type="button" class="btn btn--white btn--sm btn--icon" data-edit="' + l.id + '" aria-label="Modifier">✎</button>' +
+        '<button type="button" class="btn btn--white btn--sm btn--icon" data-delete="' + l.id + '" aria-label="Supprimer">🗑</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  $('links-list').querySelectorAll('[data-up]').forEach(function(btn){
+    btn.addEventListener('click', function(){ moveLink(btn.getAttribute('data-up'), -1); });
+  });
+  $('links-list').querySelectorAll('[data-down]').forEach(function(btn){
+    btn.addEventListener('click', function(){ moveLink(btn.getAttribute('data-down'), 1); });
+  });
+  $('links-list').querySelectorAll('[data-edit]').forEach(function(btn){
+    btn.addEventListener('click', function(){ editLink(btn.getAttribute('data-edit')); });
+  });
+  $('links-list').querySelectorAll('[data-delete]').forEach(function(btn){
+    btn.addEventListener('click', function(){ deleteLink(btn.getAttribute('data-delete')); });
+  });
+}
+</script>
+</body>
+</html>

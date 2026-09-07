@@ -73,6 +73,11 @@
 //     }
 //   }
 // }
+//
+// Depuis le 07.09.2026, la console Firebase héberge aussi un nœud "goLinks"
+// (sans rapport avec le jeu — les liens de go.html/cc-9f3k2.html) dans ce
+// même objet "rules" : voir cc-9f3k2.html pour son schéma et ses règles
+// complètes, non dupliquées ici.
 
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getDatabase, ref, push, set, get, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
