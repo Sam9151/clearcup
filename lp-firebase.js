@@ -33,7 +33,7 @@
 //         // champ libre ici permettrait d'écrire du HTML/JS affiché sans échappement
 //         // dans stats.html (faille XSS corrigée le 07.09.2026, voir escapeHtml() côté
 //         // affichage — cette règle ferme aussi le trou côté écriture).
-//         "distractionId": { ".validate": "newData.val() == null || (newData.isString() && newData.val().matches(/^(pote_appelle|commande_prete|photo_groupe|drop_arrive|uber_arrive|story_poster|notif_batterie|pub_flash|tag_ig|mail_pro|meteo_orage|maj_app|bousculade|basses|derive|rotation)$/))" },
+//         "distractionId": { ".validate": "newData.val() == null || (newData.isString() && newData.val().matches(/^(pote_appelle|commande_prete|photo_groupe|drop_arrive|navette_repart|groupe_piste|notif_batterie|pub_flash|colis_livre|mail_pro|meteo_orage|maj_app|bousculade|basses|derive|rotation)$/))" },
 //         "percentileShown": { ".validate": "newData.val() == null || (newData.isNumber() && newData.val() >= 0 && newData.val() <= 100)" },
 //         "clientId": { ".validate": "newData.isString() && newData.val().length <= 64" },
 //         "gameVersion": { ".validate": "newData.isString() && newData.val().length <= 16" },
@@ -45,7 +45,12 @@
 //     "festivals": {
 //       ".read": "auth != null",
 //       "$festivalId": {
-//         ".write": "auth != null && !data.exists()",
+//         // ".write" ouvert à tout admin authentifié (pas seulement la
+//         // création comme avant le 07.09.2026) : stats.html permet
+//         // désormais aussi de renommer (update sur "name" uniquement,
+//         // "createdAt" jamais touché donc jamais revalidé) et de supprimer
+//         // un festival (remove(), qui ignore ".validate" de toute façon).
+//         ".write": "auth != null",
 //         ".validate": "newData.hasChildren(['name','createdAt'])",
 //         "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 80" },
 //         "createdAt": { ".validate": "newData.val() == now" },
@@ -64,6 +69,12 @@ import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/fireba
 import { getDatabase, ref, push, set, get, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 
 var QUEUE_KEY = 'lp_pending_runs';
+// File "morte" : parties qu'on a renoncé à envoyer après plusieurs échecs
+// (voir flushQueue()) — jamais lue par le jeu, sert juste à ne pas perdre
+// la donnée silencieusement et à pouvoir diagnostiquer depuis la console si
+// besoin (localStorage.getItem('lp_failed_runs')).
+var DEAD_LETTER_KEY = 'lp_failed_runs';
+var MAX_ATTEMPTS = 5;
 
 function readQueue(){
   try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }
@@ -72,6 +83,14 @@ function readQueue(){
 function writeQueue(list){
   try { localStorage.setItem(QUEUE_KEY, JSON.stringify(list)); }
   catch(e){ /* quota pleine ou storage indisponible : tant pis, pas bloquant pour le jeu */ }
+}
+function readDeadLetter(){
+  try { return JSON.parse(localStorage.getItem(DEAD_LETTER_KEY) || '[]'); }
+  catch(e){ return []; }
+}
+function writeDeadLetter(list){
+  try { localStorage.setItem(DEAD_LETTER_KEY, JSON.stringify(list.slice(-50))); } // borné à 50, jamais purgé sinon
+  catch(e){ /* quota pleine : tant pis, ces entrées étaient déjà perdues de toute façon */ }
 }
 
 var db = null;
@@ -97,8 +116,16 @@ function flushQueue(){
   flushing = true;
 
   var next = queue[0];
+  // _attempts est un compteur interne (voir le .catch() plus bas), jamais
+  // envoyé à Firebase : un champ en trop ferait échouer la validation
+  // ("$other": {".validate": false} dans les règles), ce qui aurait
+  // condamné CETTE MÊME entrée à un échec permanent dès sa 2e tentative.
+  var payload = Object.assign({}, next);
+  delete payload._attempts;
+  payload.createdAt = serverTimestamp();
+
   var runRef = push(ref(db, 'runs'));
-  set(runRef, Object.assign({}, next, { createdAt: serverTimestamp() }))
+  set(runRef, payload)
     .then(function(){
       // On relit la file (plutôt que de réutiliser la variable `queue`
       // capturée plus haut) au cas où d'autres parties se seraient ajoutées
@@ -112,6 +139,25 @@ function flushQueue(){
     })
     .catch(function(err){
       console.warn('[lp-firebase] écriture différée (hors-ligne ou règles Firebase) :', err && err.message);
+      // BUG corrigé le 07.09.2026 : avant, on se contentait de logger et de
+      // réessayer indéfiniment SANS jamais retirer l'entrée en échec de la
+      // file — une seule partie durablement invalide (ex. un caractère non
+      // autorisé glissé dans le handle avant le durcissement de
+      // sanitizeHandle()) bloquait donc TOUTES les parties suivantes du
+      // même appareil, pour toujours, silencieusement. On retente
+      // maintenant quelques fois (le cas normal : coupure réseau
+      // passagère), puis on met l'entrée de côté dans lp_failed_runs
+      // plutôt que de bloquer la file indéfiniment.
+      var remaining = readQueue();
+      if (remaining.length){
+        remaining[0]._attempts = (remaining[0]._attempts || 0) + 1;
+        if (remaining[0]._attempts >= MAX_ATTEMPTS){
+          var dead = readDeadLetter();
+          dead.push(remaining.shift());
+          writeDeadLetter(dead);
+        }
+        writeQueue(remaining);
+      }
       flushing = false; // on retentera au prochain déclencheur ci-dessous
     });
 }

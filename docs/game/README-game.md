@@ -427,3 +427,125 @@ règles actuelles dans la console Firebase par la version complète incluant
   à la date où elles ont été écrites. Ce fichier lui-même déplacé de la
   racine vers `docs/game/README-game.md` (toujours untracked, inchangé
   côté contenu sinon).
+
+- **07.09.2026** — Retour de tests joueurs : la distinction action à faire
+  (type A) / leurre à ignorer (type B) n'était pas assez lisible. Après
+  discussion avec Sam, la vraie règle retenue n'est **pas physique**
+  ("ça t'oblige à lâcher tes mains") mais **thématique** : type A = ça se
+  passe ce soir, à l'événement, avec les gens présents ; type B = aucun
+  lien avec le festival, ça pourrait arriver n'importe quel jour normal.
+  4 distractions renommées et réécrites pour coller à cette règle (poids/
+  timing/interaction de jeu inchangés, uniquement texte + icône + id) :
+  - `uber_arrive` → **`navette_repart`** ("La navette repart" / "Dans 2
+    minutes") — une appli de transport externe n'a rien à voir avec
+    l'intérieur du festival ; une 1ère piste "contrôle bracelet" écartée
+    par Sam (trop intimidante), remplacée par la navette du festival
+    lui-même (urgence positive, pas stressante).
+  - `story_poster` → **`groupe_piste`** ("Le groupe t'embarque" / "Direction
+    la piste") — poster sa propre story Instagram est une action générique,
+    pas spécifique au fait d'être au festival.
+  - `tag_ig` → **`colis_livre`** ("Colis livré" / "Devant ta porte") — un
+    tag Instagram "dans une story" restait ambigu (pourrait être pris ce
+    soir même) ; remplacé par une notification complètement banale, sans
+    aucune ambiguïté possible avec l'événement.
+  - `pote_appelle` (id inchangé, garde son écran d'appel dédié
+    `buildCallBanner()`) — message de révélation (`rate`) enrichi pour
+    ancrer l'appel dans l'événement ("Il te cherchait dans la foule…").
+    Le sous-titre "mobile" affiché sur l'écran d'appel lui-même n'a **pas**
+    été touché : c'est le libellé du type d'appel façon vrai téléphone
+    (voir `buildCallBanner()`), pas un texte descriptif libre — y mettre
+    une phrase l'aurait rendu incohérent.
+  Règles Firebase (`lp-firebase.js`) mises à jour en conséquence (liste
+  fermée des `distractionId` valides) — **à recoller dans la console
+  Firebase** si ce n'est pas déjà fait suite à la faille XSS du même jour.
+  Vérifié : les 16 id de `DISTRACTIONS` et les 12 clés de
+  `COPY.distractions` (types A+B) correspondent exactement, syntaxe JS
+  validée.
+
+- **07.09.2026** — Deux autres retours de tests joueurs, même session :
+  - **Répétitions** : `weightedPick()` tirait au hasard pur à chaque carte/
+    déplacement de verre, sans aucune mémoire — une même distraction pouvait
+    revenir plusieurs fois d'affilée, et certaines n'apparaissaient presque
+    jamais sur les parties courtes pendant que d'autres revenaient sans
+    cesse. Remplacé par `weightedBagPick()` : un "sac de pioche" pondéré
+    (même principe que le randomizer 7-bag de Tetris) — chaque id est
+    dupliqué `poids` fois dans le sac, mélangé, puis pioché sans remise :
+    tout le pool défile avant qu'un id ne puisse revenir, et un garde-fou
+    supplémentaire empêche explicitement deux tirages identiques d'affilée.
+    Deux sacs indépendants (`drawState.cards` pour les cartes A/B,
+    `drawState.typeC` pour bousculade/basses/dérive/rotation), reconstruits
+    automatiquement à chaque déblocage de phase et remis à zéro à chaque
+    nouvelle partie (`resetDrawBags()` dans `startGame()`).
+  - **Règles peu claires** : la popup "Règles" ne disait jamais explicitement
+    qu'il fallait taper certaines cartes et en ignorer d'autres — juste
+    "gère les distractions vite", ce qui explique en bonne partie la
+    confusion remontée en tout début de cette session de retours. Réécrites
+    en 5 points (au lieu de 4), avec un point dédié qui encode directement
+    la nouvelle règle festival/hors-festival définie ci-dessus ("vient du
+    festival → tape-la vite ; aucun rapport → ignore-la, perdu direct si tu
+    la touches"), plus un point séparé pour le verre qui bouge (type C),
+    qui n'était mentionné nulle part avant.
+
+- **07.09.2026** — Refonte `stats.html` + correctifs `lp-firebase.js`/
+  `game.html`, suite au retour "le pseudo Instagram n'apparaît pas dans le
+  classement, certaines parties ne s'enregistrent pas du tout, le dashboard
+  est peu réactif". Debug systématique (voir méthode dans le message de
+  session) — deux causes racines trouvées dans le code, pas des suppositions :
+  - **Bug bloquant (le plus grave)** : `flushQueue()` dans `lp-firebase.js`
+    ne retirait JAMAIS une entrée en échec de la file locale
+    (`lp_pending_runs`) — juste un `console.warn()` invisible pour le
+    joueur. Comme la fonction traite toujours la première entrée de la
+    file, UNE SEULE partie durablement invalide bloquait silencieusement
+    TOUTES les parties suivantes du même appareil, pour toujours. Corrigé :
+    compteur de tentatives (`_attempts`, jamais envoyé à Firebase — un champ
+    en trop aurait lui-même fait échouer la validation via `"$other":
+    {".validate": false}`), 5 essais puis mise de côté dans une file morte
+    locale (`lp_failed_runs`, plafonnée à 50, jamais envoyée nulle part —
+    sert juste à ne pas perdre la donnée et à pouvoir diagnostiquer).
+  - **Déclencheur probable du blocage** : `sanitizeHandle()` (game.html) ne
+    retirait que le `@` et les espaces en bout, sans filtrer les caractères
+    interdits (espace au milieu, accent, emoji…) — un pseudo mal formé
+    faisait donc échouer l'écriture ENTIÈRE de la partie côté Firebase.
+    Corrigé : filtre strict `[a-z0-9._]` (identique à la regex Firebase),
+    donc plus aucun pseudo saisi ne peut désormais provoquer ce blocage.
+  - **Cause du "beaucoup de comptes anonymes"** : la popup de capture du
+    pseudo ne s'affichait qu'une seule fois, au tout premier lancement
+    (`instagramAlreadyAsked()`) — un joueur qui passait ("Plus tard")
+    n'avait plus jamais l'occasion d'en ajouter un. Ajout d'un bouton
+    "Ajouter/Modifier mon pseudo Instagram" sur l'écran de révélation
+    (`#btn-pseudo-manage`, réutilise `#modal-instagram`), à chaque fin de
+    partie plutôt qu'une seule fois dans toute la vie de l'appareil.
+  - **Refonte `stats.html`** (demande explicite de Sam : "le plus simple
+    possible, quitte à enlever des stats", "backend vraiment parfait",
+    "fonctionne en direct assez rapidement") :
+    - `get()` ponctuel + bouton "Actualiser" → trois écoutes `onValue()`
+      temps réel (`runs`, `festivals`, `activeFestivalId`), tout se
+      redessine automatiquement. Erreur de connexion affichée dans un
+      bandeau visible (`#banner-error`) plutôt que seulement en console —
+      un point aveugle qui a probablement contribué à ce que ce problème
+      passe inaperçu aussi longtemps.
+    - Classement déplacé de la pop-up vers l'écran principal, **filtré aux
+      seuls joueurs ayant renseigné un pseudo** (les anonymes comptent
+      toujours dans "Parties jouées"/temps moyen/% arrivés au bout, mais
+      disparaissent du classement).
+    - Festivals : ajout du renommage et de la suppression (v1 ne
+      permettait que créer + activer, décision explicitement revue par
+      Sam). Supprimer le festival actif repasse automatiquement en
+      Général.
+    - Simplifié : suppression de "Temps médian", "Causes de perte" et
+      "Distractions qui font le plus perdre" (+ tout le code mort
+      associé : `CAUSE_LABELS`, `renderBars()`, `prettyDistractionId()`,
+      `median()`) — ainsi qu'un bloc CSS `.classement-list/.classement-
+      rank/...` déjà mort avant même cette refonte (jamais utilisé dans le
+      HTML, découvert au passage).
+  - **Règles Firebase** (`lp-firebase.js`) mises à jour : `festivals/
+    $festivalId` accepte maintenant n'importe quelle écriture d'un admin
+    authentifié (plus seulement la création) pour permettre renommer/
+    supprimer. **Règles consolidées à recoller dans la console Firebase**
+    (une seule fois, cumule tous les changements de cette session : XSS du
+    matin + renommage des distractions + festivals CRUD) — voir le message
+    de session pour le bloc complet à jour.
+  - Vérifié : syntaxe JS des 3 fichiers (`game.html`, `lp-firebase.js`,
+    `stats.html`) validée, tous les ID HTML référencés en JS existent,
+    aucun résidu des éléments supprimés, chargement HTTP 200 sur les 3
+    pages via serveur local.

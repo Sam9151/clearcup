@@ -839,9 +839,10 @@
     display:flex; align-items:center; justify-content:center;
     font-size:1.3rem;
   }
-  /* Variante avatar (tag_ig) : même rond que .lp-call__avatar — une initiale
-     plutôt qu'un émoji, cohérent avec l'écran d'appel pour ce type de contenu
-     social. */
+  /* Variante avatar : même rond que .lp-call__avatar — une initiale plutôt
+     qu'un émoji. Actuellement inutilisée par aucune distraction (gardée
+     disponible pour une future carte à contenu social type "un contact
+     t'écrit"), voir def.avatar dans DISTRACTIONS. */
   .lp-order__icon.is-avatar{
     font-family:var(--font-title);
     font-size:1.05rem;
@@ -887,7 +888,7 @@
   .lp-order__action.is-ring circle{ fill:none; stroke-width:4; }
   .lp-order__action.is-ring .ring-track{ stroke:rgba(10,10,10,.12); }
   .lp-order__action.is-ring .ring-fill{ stroke:var(--card-accent, #64A4F6); stroke-linecap:round; transition:stroke-dashoffset 40ms linear; }
-  /* Variante « slide » (story_poster) : l'action pilule devient un rail que
+  /* Variante « slide » (groupe_piste) : l'action pilule devient un rail que
      le pouce fait glisser jusqu'au bout — voir startSlide()/updateSlide(). */
   .lp-order__action.is-slider{
     position:relative;
@@ -1348,6 +1349,13 @@
       <button type="button" id="btn-partager" class="nb-btn">Partager mon score</button>
       <button type="button" id="btn-rejouer" class="nb-btn nb-btn--white">Rejouer</button>
       <button type="button" id="btn-retour-menu" class="nb-btn">Retour au menu</button>
+      <!-- Ajouté le 07.09.2026 : avant, le pseudo Instagram ne pouvait être
+           saisi qu'une seule fois, au tout premier lancement (#modal-instagram
+           ne se redéclenchait jamais, voir instagramAlreadyAsked()) — un
+           joueur qui passait ("Plus tard") restait anonyme pour toujours,
+           sans recours. Ce bouton réutilise la même popup, texte mis à jour
+           dynamiquement par updatePseudoManageButton(). -->
+      <button type="button" id="btn-pseudo-manage" class="nb-btn nb-btn--white nb-btn--sm"></button>
     </div>
   </section>
 
@@ -1390,18 +1398,22 @@
       <div class="regles-list">
         <div class="regles-item">
           <span class="regles-num">1</span>
-          <p>Garde un doigt sur ton verre, sans le lâcher.</p>
+          <p>Garde un doigt posé sur ton verre en permanence, sans le lâcher.</p>
         </div>
         <div class="regles-item">
           <span class="regles-num">2</span>
-          <p>Un 2<sup>e</sup> doigt posé = perdu direct.</p>
+          <p>Un 2<sup>e</sup> doigt posé sur l'écran = perdu direct.</p>
         </div>
         <div class="regles-item">
           <span class="regles-num">3</span>
-          <p>Des distractions arrivent : gère-les vite, sans lâcher trop longtemps.</p>
+          <p>Une carte vient du festival (commande, potes, la piste…) ? Tape-la vite. Elle n'a aucun rapport (appli, pub, mail…) ? Ignore-la — y toucher te fait perdre direct.</p>
         </div>
         <div class="regles-item">
           <span class="regles-num">4</span>
+          <p>Si ton verre bouge tout seul (bousculade, danse…), garde ton doigt dessus et suis-le.</p>
+        </div>
+        <div class="regles-item">
+          <span class="regles-num">5</span>
           <p>Tiens le plus longtemps possible avant de craquer.</p>
         </div>
       </div>
@@ -1515,8 +1527,8 @@
       // fallback sur COPY.causes, voir runRevelation()).
       pote_appelle:   {
         texte: 'Ton pote t’appelle', label: 'Répondre',
-        nom: 'Lucas', sousTitre: 'mobile',
-        rate: 'T’as laissé sonner. Le temps de décrocher, t’as lâché ton verre.'
+        nom: 'Lucas', sousTitre: 'mobile', // libellé façon écran d'appel réel (voir buildCallBanner()), pas un texte libre
+        rate: 'Il te cherchait dans la foule. Le temps de décrocher, t’as lâché ton verre.'
       },
       commande_prete: {
         texte: 'Commande prête', label: 'Récupérer', sousTitre: 'à retirer au comptoir',
@@ -1530,13 +1542,13 @@
         texte: 'Le drop arrive', sousTitre: 'Lève les bras', label: '× 2',
         rate: 'Le refrain est tombé. Toi aussi, t’as lâché ton verre.'
       },
-      uber_arrive: {
-        texte: 'Ton Uber est arrivé', sousTitre: 'Devant l’entrée', label: 'Confirmer',
-        rate: 'Le temps de valider la course, t’as lâché ton verre.'
+      navette_repart: {
+        texte: 'La navette repart', sousTitre: 'Dans 2 minutes', label: 'Courir',
+        rate: 'Le temps de courir vers la navette, t’as lâché ton verre.'
       },
-      story_poster: {
-        texte: 'Story prête à poster', sousTitre: 'Glisse pour publier', label: '→',
-        rate: 'Le temps de poster ta story, t’as lâché ton verre.'
+      groupe_piste: {
+        texte: 'Le groupe t’embarque', sousTitre: 'Direction la piste', label: '→',
+        rate: 'Tes potes t’ont tirée sur la piste. T’as lâché ton verre en te levant.'
       },
       notif_batterie: {
         texte: 'Batterie faible — 12 %', sousTitre: 'Économie d’énergie ?', label: 'Activer',
@@ -1546,12 +1558,9 @@
         texte: '-50 % aujourd’hui seulement', sousTitre: 'Offre flash', label: 'Profiter',
         rate: 'Une pub à -50 %. T’as lâché ton verre pour une offre bidon.'
       },
-      tag_ig: {
-        // texte porte le prénom en toutes lettres (contrairement à
-        // pote_appelle/.lp-call, buildOrderCard() n'affiche que copy.texte
-        // dans le titre — nom ne sert qu'à l'initiale de l'avatar).
-        texte: 'Léa t’a taguée', sousTitre: 'dans une story, il y a 2 min', label: 'Voir', nom: 'Léa',
-        rate: 'Juste un tag Instagram. T’as lâché ton verre pour voir.'
+      colis_livre: {
+        texte: 'Colis livré', sousTitre: 'Devant ta porte', label: 'Voir',
+        rate: 'Juste un colis. T’as lâché ton verre pour un carton vide.'
       },
       mail_pro: {
         texte: 'Marie (RH) : point demain', sousTitre: 'Boîte pro', label: 'Lire',
@@ -1619,13 +1628,13 @@
     { id:'commande_prete', type:'A', phaseMin:'confiance', fenetreMs:1800, poids:3, icon:'🧾', accent:'#F59E0B' },
     { id:'photo_groupe',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'📸', accent:'var(--blue)', interaction:'hold', holdMs:1000 },
     { id:'drop_arrive',    type:'A', phaseMin:'montee',    fenetreMs:1500, poids:2, icon:'🙌', accent:'var(--blue)', interaction:'doubletap' },
-    { id:'uber_arrive',    type:'A', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'🚗', accent:'var(--ink)' },
-    { id:'story_poster',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'📲', accent:'var(--blue)', interaction:'slide' },
+    { id:'navette_repart', type:'A', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'🚌', accent:'var(--ink)' },
+    { id:'groupe_piste',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'💃', accent:'var(--blue)', interaction:'slide' },
 
     // ---- Type B — leurres (NE PAS taper, sinon perdu) : même grammaire visuelle que le type A ----
     { id:'notif_batterie', type:'B', phaseMin:'confiance', fenetreMs:2200, poids:2, icon:'🔋', accent:'#F59E0B' },
     { id:'pub_flash',      type:'B', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'🏷️', accent:'#F59E0B' },
-    { id:'tag_ig',         type:'B', phaseMin:'confiance', fenetreMs:2000, poids:2, avatar:true,  accent:'var(--blue)' },
+    { id:'colis_livre',    type:'B', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'📦', accent:'var(--blue)' },
     { id:'mail_pro',       type:'B', phaseMin:'montee',    fenetreMs:2000, poids:2, icon:'✉️', accent:'var(--ink)' },
     { id:'meteo_orage',    type:'B', phaseMin:'montee',    fenetreMs:2000, poids:2, icon:'⛈️', accent:'var(--ink)' },
     { id:'maj_app',        type:'B', phaseMin:'confiance', fenetreMs:2200, poids:1, icon:'🔄', accent:'#F59E0B' },
@@ -1690,6 +1699,7 @@
   };
   var elAccueilEntree = document.querySelectorAll('.accueil-brand, .accueil-title, .accueil-hint');
   var elAccueilVerreZone = $('accueil-verre-zone');
+  var elBtnPseudoManage = $('btn-pseudo-manage');
   var elAccueilPlayer = $('accueil-player');
   var elAccueilPlayerHandle = $('accueil-player-handle');
   var elAccueilPlayerBest = $('accueil-player-best');
@@ -2006,11 +2016,18 @@
   function maybeShowInstagramCapture(){
     if (!instagramAlreadyAsked()) openModal(elModalInstagram);
   }
-  // Retire le @ éventuel, les espaces, met en minuscules — cohérent avec le
-  // schéma (`handle` stocké sans @, cf. les règles de sécurité Firebase).
+  // Retire le @ éventuel, les espaces, met en minuscules, PUIS filtre aux
+  // seuls caractères qu'Instagram autorise réellement dans un pseudo
+  // (lettres/chiffres/point/underscore) — cohérent avec le schéma (`handle`
+  // stocké sans @) ET avec la règle de validation Firebase (voir
+  // lp-firebase.js). Avant le 07.09.2026, un caractère quelconque (espace,
+  // accent, emoji…) passait tel quel : Firebase refusait alors l'écriture
+  // ENTIÈRE de la partie (pas juste le champ), ce qui — combiné au bug de
+  // file bloquante corrigé le même jour dans lp-firebase.js — pouvait geler
+  // l'enregistrement de toutes les parties suivantes du même appareil.
   function sanitizeHandle(raw){
     if (!raw) return null;
-    var h = raw.trim().replace(/^@+/, '').toLowerCase();
+    var h = raw.trim().replace(/^@+/, '').toLowerCase().replace(/[^a-z0-9._]/g, '');
     return h ? h.slice(0, 30) : null;
   }
 
@@ -2023,6 +2040,7 @@
      ============================================================================ */
   function updatePlayerHeader(){
     var handle = getHandle();
+    updatePseudoManageButton(handle); // même source de vérité, voir plus bas
     if (!handle){ elAccueilPlayer.hidden = true; return; }
     elAccueilPlayerHandle.textContent = '@' + handle;
     var bestMs = 0;
@@ -2030,6 +2048,19 @@
     elAccueilPlayerBest.textContent = bestMs > 0 ? ('Meilleur temps : ' + fmtScoreFr(bestMs) + ' s') : '';
     elAccueilPlayer.hidden = false;
   }
+
+  // Bouton sur l'écran de révélation (voir plus haut, ajouté le 07.09.2026) :
+  // "Ajouter" si le joueur n'a jamais renseigné de pseudo, "Modifier" sinon
+  // — dans les deux cas ça rouvre #modal-instagram, préremplie si un pseudo
+  // existe déjà.
+  function updatePseudoManageButton(handle){
+    if (handle === undefined) handle = getHandle();
+    elBtnPseudoManage.textContent = handle ? 'Modifier mon pseudo Instagram' : 'Ajouter mon pseudo Instagram';
+  }
+  elBtnPseudoManage.addEventListener('pointerup', function(){
+    elInputInstagram.value = getHandle() ? '@' + getHandle() : '';
+    openModal(elModalInstagram);
+  });
 
   // Centre l'en-tête pseudo/temps entre le haut de l'écran et le logo, et le
   // titre entre le verre et le bouton Commencer — demandé explicitement par
@@ -2163,14 +2194,51 @@
     return phaseIndex(phaseMin) <= phaseIndex(currentPhase().id);
   }
 
-  function weightedPick(pool){
-    var total = pool.reduce(function(s, d){ return s + (d.poids || 1); }, 0);
-    var r = Math.random() * total;
-    for (var i = 0; i < pool.length; i++){
-      r -= (pool[i].poids || 1);
-      if (r <= 0) return pool[i];
+  // Tirage "sac de pioche" pondéré (comme le randomizer 7-bag de Tetris) :
+  // remplace l'ancien weightedPick() qui tirait au hasard pur à chaque appel
+  // et pouvait donc répéter la même distraction plusieurs fois de suite, ou
+  // n'en montrer qu'une poignée sur les 12/4 disponibles pendant toute une
+  // partie. Le sac contient chaque id répété `poids` fois puis mélangé : on
+  // pioche dedans sans remise, donc TOUT le pool défile avant qu'un id ne
+  // revienne — et si jamais la mécanique de mélange retombait pile sur le
+  // même id que le tirage précédent, on le replace plus loin dans le sac
+  // (jamais deux fois d'affilée). Le sac se reconstruit automatiquement dès
+  // que le pool change de composition (nouvelle phase débloquée) ou s'épuise.
+  // resetDrawBags() (appelé par startGame()) doit remettre les deux états
+  // ({bag:[], signature:'', lastId:null}) à zéro entre deux parties.
+  function weightedBagPick(pool, state){
+    var signature = pool.map(function(d){ return d.id; }).sort().join(',');
+    if (state.signature !== signature || !state.bag.length){
+      var bag = [];
+      pool.forEach(function(d){
+        for (var i = 0; i < (d.poids || 1); i++) bag.push(d);
+      });
+      for (var i = bag.length - 1; i > 0; i--){ // Fisher-Yates
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = bag[i]; bag[i] = bag[j]; bag[j] = tmp;
+      }
+      state.bag = bag;
+      state.signature = signature;
     }
-    return pool[pool.length - 1];
+    var pick = state.bag.shift();
+    if (pick.id === state.lastId && state.bag.length){
+      var insertAt = 1 + Math.floor(Math.random() * state.bag.length);
+      state.bag.splice(insertAt, 0, pick);
+      pick = state.bag.shift();
+    }
+    state.lastId = pick.id;
+    return pick;
+  }
+
+  // Un état de sac par famille de tirage (cartes A/B vs distractions type C)
+  // — deux pools indépendants, chacun avec sa propre mémoire de répétition.
+  var drawState = {
+    cards: { bag: [], signature: '', lastId: null },
+    typeC: { bag: [], signature: '', lastId: null }
+  };
+  function resetDrawBags(){
+    drawState.cards = { bag: [], signature: '', lastId: null };
+    drawState.typeC = { bag: [], signature: '', lastId: null };
   }
 
   function vibrate(ms){
@@ -2308,6 +2376,7 @@
     game.vieZone = 'safe';
     game.lastFrameTime = performance.now();
     elCardZone.innerHTML = '';
+    resetDrawBags(); // sac de pioche remis à zéro à chaque nouvelle partie (voir weightedBagPick())
 
     moveVerreTo(elJeuVerreZone);
     resetVerreMotion(); // efface un éventuel transform inline (is-derive) laissé par la partie précédente
@@ -2523,7 +2592,7 @@
   function spawnCard(phase){
     var pool = DISTRACTIONS.filter(function(d){ return (d.type === 'A' || d.type === 'B') && phaseUnlocked(d.phaseMin); });
     if (!pool.length) return;
-    var def = weightedPick(pool);
+    var def = weightedBagPick(pool, drawState.cards);
     var copy = COPY.distractions[def.id];
 
     // pote_appelle garde son propre écran d'appel ; toutes les autres
@@ -2721,7 +2790,7 @@
     game.holdState = null;
   }
 
-  // Slide (story_poster) : le pouce fait glisser le curseur jusqu'à ~88% du
+  // Slide (groupe_piste) : le pouce fait glisser le curseur jusqu'à ~88% du
   // rail pour valider — mêmes principes que le hold (relâcher avant la fin
   // = juste un reset, pas un échec).
   var SLIDE_SUCCESS_FRAC = 0.88;
@@ -2758,7 +2827,7 @@
   function scheduleTypeC(){
     var pool = DISTRACTIONS.filter(function(d){ return d.type === 'C' && phaseUnlocked(d.phaseMin); });
     if (!pool.length) return;
-    var def = weightedPick(pool);
+    var def = weightedBagPick(pool, drawState.typeC);
     if (def.id === 'bousculade') triggerBousculade();
     else if (def.id === 'basses') triggerBasses();
     else if (def.id === 'derive') triggerDerive();

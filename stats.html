@@ -8,28 +8,32 @@
 
 <!--
   ============================================================================
-  STATS.HTML — dashboard admin pour "Lâche pas" (Jalon 2).
-  Fichier unique, pas de build step, même philosophie que game.html — mais
-  CONTRAIREMENT à game.html, cette page PARLE DIRECTEMENT à Firebase (Auth +
-  Realtime Database) : le découplage localStorage/événement de game.html
-  existe pour que le jeu reste jouable hors-ligne, une contrainte qui n'a
-  aucun sens ici (page admin, forcément en ligne, forcément authentifiée).
+  STATS.HTML — dashboard admin pour "Lâche pas". Fichier unique, pas de build
+  step, même philosophie que game.html — mais CONTRAIREMENT à game.html,
+  cette page PARLE DIRECTEMENT à Firebase (Auth + Realtime Database) : le
+  découplage localStorage/événement de game.html existe pour que le jeu
+  reste jouable hors-ligne, une contrainte qui n'a aucun sens ici (page
+  admin, forcément en ligne, forcément authentifiée).
 
-  Contenu :
-  - Connexion (Firebase Auth email/mot de passe, compte déjà créé)
-  - Sélecteur de classement : Général (hors festival) + festivals créés
-  - Gestion des festivals : créer (juste un nom) + activer (séparément) —
-    activer "Général" désactive le mode festival. Pas de renommer/supprimer
-    en v1 (décision explicite de Sam).
-  - Classement (top 10 par joueur, meilleur score = temps tenu le plus long)
-    en pop-up avec croix pour fermer.
-  - Stats scopées sur le classement sélectionné : nb de parties, temps
-    moyen/médian, % arrivés au bout (45s, cause "cap"), répartition des
-    causes de perte, et quelles distractions précises font le plus perdre.
-  - Bouton "Actualiser" — pas de rafraîchissement live (décision explicite).
+  Refonte du 07.09.2026 (retours de tests) — voir docs/game/README-game.md
+  pour le détail des bugs corrigés côté game.html/lp-firebase.js (parties
+  qui ne s'enregistraient pas, pseudos jamais capturés). Côté stats.html :
+  - Temps réel (onValue) au lieu d'un chargement ponctuel (get()) — plus de
+    bouton "Actualiser", tout se met à jour tout seul.
+  - Classement affiché directement sur l'écran principal (avant : pop-up
+    séparée), filtré aux seuls joueurs ayant renseigné un pseudo Instagram
+    (les parties anonymes comptent toujours dans "Parties jouées" et les
+    autres stats, elles disparaissent seulement du classement).
+  - Gestion complète des festivals : créer, activer, renommer, supprimer
+    (avant : création + activation seulement, décision v1 revue par Sam).
+  - Simplifié : suppression de "Temps médian", "Causes de perte" et
+    "Distractions qui font le plus perdre" (demande explicite de Sam —
+    "le plus simple possible, quitte à enlever des stats").
 
   Sécurité : voir lp-firebase.js pour les règles Realtime Database à jour
-  (festivals + activeFestivalId + festivalId dans runs).
+  (festivals + activeFestivalId + festivalId dans runs). Le rename/delete
+  de festival ci-dessous suppose "festivals/$festivalId".write déjà ouvert
+  à tout admin authentifié (plus seulement la création, voir lp-firebase.js).
   ============================================================================
 -->
 
@@ -88,6 +92,7 @@
   .btn:active{ transform:translate(2px,2px); box-shadow:none; }
   .btn--white{ background:var(--white); color:var(--ink); }
   .btn--sm{ font-size:.8rem; padding:.4rem .9rem; box-shadow:2px 2px 0 var(--ink); }
+  .btn--icon{ padding:.4rem .6rem; }
   .btn:disabled{ opacity:.45; cursor:default; pointer-events:none; }
 
   input[type="email"], input[type="password"], input[type="text"]{
@@ -120,7 +125,13 @@
     margin-bottom:1.25rem; flex-wrap:wrap;
   }
   header.top h1{ font-size:1.5rem; }
-  .top-actions{ display:flex; gap:.6rem; }
+
+  #banner-error{
+    display:none;
+    background:#FDECEA; color:#C0392B; border:1.5px solid #C0392B;
+    border-radius:12px; padding:.8rem 1rem; margin-bottom:1.25rem;
+    font-size:.85rem;
+  }
 
   .active-banner{
     font-family:var(--font-title);
@@ -150,7 +161,7 @@
     display:inline-block; margin-left:.5rem;
     font-size:.7rem; font-weight:700; color:var(--blue);
   }
-  .scope-actions{ display:flex; gap:.5rem; align-items:center; flex-shrink:0; }
+  .scope-actions{ display:flex; gap:.4rem; align-items:center; flex-shrink:0; }
 
   .new-festival{ display:flex; gap:.6rem; margin-top:1rem; }
   .new-festival input{ flex:1; }
@@ -169,45 +180,10 @@
   .stat-tile .num{ font-family:var(--font-title); font-size:1.7rem; display:block; }
   .stat-tile .label{ font-size:.75rem; color:rgba(10,10,10,.6); }
 
-  .bar-row{ margin:.55rem 0; }
-  .bar-row .bar-label{ display:flex; justify-content:space-between; font-size:.85rem; margin-bottom:.25rem; }
-  .bar-track{ background:#E6ECF7; border-radius:999px; height:10px; overflow:hidden; }
-  .bar-fill{ background:var(--blue); height:100%; border-radius:999px; }
-
   .empty-note{ font-size:.85rem; color:rgba(10,10,10,.5); }
 
-  /* ---- Pop-up classement (même recette que game.html : overlay + card) ---- */
-  .modal-overlay{
-    position:fixed; inset:0;
-    background:rgba(10,10,10,.45);
-    display:flex; align-items:center; justify-content:center;
-    padding:1.25rem;
-    opacity:0; pointer-events:none;
-    transition:opacity 180ms ease;
-    z-index:50;
-  }
-  .modal-overlay.is-open{ opacity:1; pointer-events:auto; }
-  .modal-card{
-    background:var(--white);
-    border:var(--border);
-    border-radius:var(--radius);
-    box-shadow:6px 6px 0 var(--ink);
-    padding:1.4rem;
-    width:100%; max-width:420px;
-    max-height:80vh;
-    overflow-y:auto;
-    position:relative;
-  }
-  .modal-close{
-    position:absolute; top:.9rem; right:.9rem;
-    width:34px; height:34px;
-    border:var(--border); border-radius:50%;
-    background:var(--white);
-    font-size:1rem; line-height:1;
-    cursor:pointer;
-  }
-  .modal-card h2{ font-size:1.3rem; margin-bottom:.9rem; padding-right:2.2rem; }
-  #classement-scope-label{ font-size:.85rem; color:rgba(10,10,10,.55); margin:-0.5rem 0 1rem; }
+  /* ---- Classement (affiché directement dans la carte, plus de pop-up) ---- */
+  #scope-selected-label{ margin:-0.25rem 0 1rem; }
   ol#classement-list{ list-style:none; margin:0; padding:0; }
   ol#classement-list li{
     display:flex; align-items:center; gap:.7rem;
@@ -242,11 +218,10 @@
   <div class="wrap">
     <header class="top">
       <h1>Lâche pas — Stats</h1>
-      <div class="top-actions">
-        <button type="button" class="btn btn--white btn--sm" id="btn-refresh">Actualiser</button>
-        <button type="button" class="btn btn--white btn--sm" id="btn-logout">Se déconnecter</button>
-      </div>
+      <button type="button" class="btn btn--white btn--sm" id="btn-logout">Se déconnecter</button>
     </header>
+
+    <p id="banner-error"></p>
 
     <div class="active-banner" id="active-banner">Mode actif : —</div>
 
@@ -260,11 +235,9 @@
     </div>
 
     <div class="card">
-      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:.5rem;">
-        <h2 style="font-size:1.1rem;">Classement sélectionné</h2>
-        <button type="button" class="btn btn--sm" id="btn-open-classement">Voir le top 10</button>
-      </div>
+      <h2 style="font-size:1.1rem; margin-bottom:.5rem;">Classement</h2>
       <p class="empty-note" id="scope-selected-label">Général</p>
+      <ol id="classement-list"><li class="empty-note" style="border:none;">Aucune partie enregistrée pour ce classement.</li></ol>
     </div>
 
     <div class="card">
@@ -272,30 +245,9 @@
       <div class="stat-grid">
         <div class="stat-tile"><span class="num" id="stat-total">—</span><span class="label">Parties jouées</span></div>
         <div class="stat-tile"><span class="num" id="stat-avg">—</span><span class="label">Temps moyen</span></div>
-        <div class="stat-tile"><span class="num" id="stat-median">—</span><span class="label">Temps médian</span></div>
         <div class="stat-tile"><span class="num" id="stat-cap">—</span><span class="label">Arrivés au bout</span></div>
       </div>
     </div>
-
-    <div class="card">
-      <h2 style="font-size:1.1rem; margin-bottom:.5rem;">Causes de perte</h2>
-      <div id="cause-breakdown"><p class="empty-note">—</p></div>
-    </div>
-
-    <div class="card">
-      <h2 style="font-size:1.1rem; margin-bottom:.5rem;">Distractions qui font le plus perdre</h2>
-      <div id="distraction-breakdown"><p class="empty-note">—</p></div>
-    </div>
-  </div>
-</div>
-
-<!-- ============ Pop-up classement ============ -->
-<div id="modal-classement" class="modal-overlay">
-  <div class="modal-card">
-    <button type="button" class="modal-close" id="btn-classement-close" aria-label="Fermer">✕</button>
-    <h2>Top 10</h2>
-    <p id="classement-scope-label">Général</p>
-    <ol id="classement-list"></ol>
   </div>
 </div>
 
@@ -304,7 +256,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut }
   from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js';
-import { getDatabase, ref, get, push, set, serverTimestamp }
+import { getDatabase, ref, onValue, push, set, update, remove, serverTimestamp }
   from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 
 function $(id){ return document.getElementById(id); }
@@ -318,15 +270,21 @@ var auth = getAuth(app);
 var db = getDatabase(app);
 
 /* ============================================================================
-   ÉTAT LOCAL — tout est refait à zéro à chaque "Actualiser" (pas de live,
-   décision explicite de Sam : plus simple, plus léger).
+   ÉTAT LOCAL — alimenté en continu par les écouteurs temps réel (voir
+   startListeners() plus bas), jamais rechargé "à la main".
    ============================================================================ */
 var state = {
-  festivals: {},        // { festivalId: { name, createdAt } }
+  festivals: {},         // { festivalId: { name, createdAt } }
   activeFestivalId: '',  // '' = mode Général
   selectedScope: '',     // '' = Général, sinon un festivalId — ce qu'on est en train de regarder
-  runs: []               // toutes les parties chargées depuis /runs
+  runs: []                // toutes les parties, mises à jour en direct depuis /runs
 };
+
+function showError(msg){
+  var el = $('banner-error');
+  el.textContent = msg;
+  el.style.display = msg ? 'block' : 'none';
+}
 
 /* ============================================================================
    CONNEXION
@@ -349,55 +307,72 @@ onAuthStateChanged(auth, function(user){
   if (user){
     $('view-login').style.display = 'none';
     $('view-dashboard').style.display = 'block';
-    loadAll();
+    startListeners();
   } else {
     $('view-dashboard').style.display = 'none';
     $('view-login').style.display = 'flex';
+    stopListeners();
   }
 });
 
 /* ============================================================================
-   CHARGEMENT DES DONNÉES
+   TEMPS RÉEL — trois écoutes indépendantes (onValue), chacune redessine ce
+   qui dépend d'elle dès que Firebase pousse un changement. Remplace l'ancien
+   loadAll() sur get() + bouton "Actualiser" (décision explicite revue par
+   Sam le 07.09.2026 : le classement doit être à jour tout seul, vite).
    ============================================================================ */
-function loadAll(){
-  $('scope-list').innerHTML = '<p class="empty-note">Chargement…</p>';
-  Promise.all([
-    get(ref(db, 'festivals')),
-    get(ref(db, 'activeFestivalId')),
-    get(ref(db, 'runs'))
-  ]).then(function(results){
-    var festivalsSnap = results[0], activeSnap = results[1], runsSnap = results[2];
+var unsubscribers = [];
 
-    state.festivals = festivalsSnap.exists() ? festivalsSnap.val() : {};
-    state.activeFestivalId = activeSnap.exists() ? (activeSnap.val() || '') : '';
+function startListeners(){
+  if (unsubscribers.length) return; // déjà démarré (ex: reconnexion sans reload de page)
 
-    var runsObj = runsSnap.exists() ? runsSnap.val() : {};
+  unsubscribers.push(onValue(ref(db, 'festivals'), function(snap){
+    state.festivals = snap.exists() ? snap.val() : {};
+    // Le festival regardé peut avoir été supprimé entre-temps (par cette
+    // session ou une autre) : on retombe sur Général plutôt que d'afficher
+    // un classement fantôme.
+    if (state.selectedScope && !state.festivals[state.selectedScope]) state.selectedScope = '';
+    renderScopeList();
+    renderActiveBanner();
+    renderClassement();
+    renderStats();
+    showError('');
+  }, function(err){
+    console.warn('[stats] festivals:', err && err.message);
+    showError("Connexion à Firebase perdue (festivals) : " + (err && err.message ? err.message : err));
+  }));
+
+  unsubscribers.push(onValue(ref(db, 'activeFestivalId'), function(snap){
+    state.activeFestivalId = snap.exists() ? (snap.val() || '') : '';
+    renderActiveBanner();
+    renderScopeList();
+  }, function(err){
+    console.warn('[stats] activeFestivalId:', err && err.message);
+  }));
+
+  unsubscribers.push(onValue(ref(db, 'runs'), function(snap){
+    var runsObj = snap.exists() ? snap.val() : {};
     state.runs = Object.keys(runsObj).map(function(id){
       var r = runsObj[id];
       r.id = id;
       return r;
     });
-
-    // Par défaut : on regarde le mode actif au chargement (le plus probable
-    // vu ce qu'on veut surveiller), sauf s'il ne correspond plus à rien
-    // (festival supprimé — pas censé arriver en v1, mais on reste prudent).
-    if (state.selectedScope && state.selectedScope !== '' && !state.festivals[state.selectedScope]){
-      state.selectedScope = '';
-    }
-    if (!state.selectedScope){ state.selectedScope = state.activeFestivalId || ''; }
-
-    renderScopeList();
-    renderActiveBanner();
+    renderClassement();
     renderStats();
-  }).catch(function(err){
-    $('scope-list').innerHTML = '<p class="empty-note">Erreur de chargement : ' + (err && err.message ? err.message : err) + '</p>';
-    console.warn('[stats] échec chargement', err);
-  });
+    showError('');
+  }, function(err){
+    console.warn('[stats] runs:', err && err.message);
+    showError("Connexion à Firebase perdue (parties) : " + (err && err.message ? err.message : err));
+  }));
 }
-$('btn-refresh').addEventListener('click', loadAll);
+
+function stopListeners(){
+  unsubscribers.forEach(function(unsub){ unsub(); });
+  unsubscribers = [];
+}
 
 /* ============================================================================
-   FESTIVALS — création + activation (pas de renommer/supprimer en v1)
+   FESTIVALS — créer, activer, renommer, supprimer.
    ============================================================================ */
 $('btn-create-festival').addEventListener('click', function(){
   var name = $('input-new-festival').value.trim();
@@ -405,18 +380,38 @@ $('btn-create-festival').addEventListener('click', function(){
   $('btn-create-festival').disabled = true;
   var newRef = push(ref(db, 'festivals'));
   set(newRef, { name: name, createdAt: serverTimestamp() })
-    .then(function(){
-      $('input-new-festival').value = '';
-      loadAll();
-    })
+    .then(function(){ $('input-new-festival').value = ''; })
     .catch(function(err){ alert('Création impossible : ' + (err && err.message ? err.message : err)); })
     .finally(function(){ $('btn-create-festival').disabled = false; });
 });
 
 function activateScope(festivalId){
   set(ref(db, 'activeFestivalId'), festivalId || null)
-    .then(loadAll)
     .catch(function(err){ alert('Activation impossible : ' + (err && err.message ? err.message : err)); });
+}
+
+function renameFestival(id){
+  var current = festivalName(id);
+  var name = prompt('Nouveau nom pour "' + current + '" :', current);
+  if (name === null) return; // annulé
+  name = name.trim();
+  if (!name || name === current) return;
+  update(ref(db, 'festivals/' + id), { name: name })
+    .catch(function(err){ alert('Renommage impossible : ' + (err && err.message ? err.message : err)); });
+}
+
+function deleteFestival(id){
+  var name = festivalName(id);
+  if (!confirm('Supprimer "' + name + '" ? Les parties déjà enregistrées le gardent en référence (elles afficheront juste "Festival supprimé"), mais le classement dédié disparaît.')) return;
+  var wasActive = state.activeFestivalId === id;
+  remove(ref(db, 'festivals/' + id))
+    .then(function(){
+      if (wasActive) return set(ref(db, 'activeFestivalId'), '');
+    })
+    .then(function(){
+      if (state.selectedScope === id) state.selectedScope = '';
+    })
+    .catch(function(err){ alert('Suppression impossible : ' + (err && err.message ? err.message : err)); });
 }
 
 /* ============================================================================
@@ -442,11 +437,13 @@ function renderScopeList(){
     var isSelected = id === state.selectedScope;
     return '<div class="scope-row' + (isSelected ? ' is-selected' : '') + '">' +
       '<button type="button" class="scope-name-btn" data-scope="' + id + '">' +
-        festivalName(id) +
+        escapeHtml(festivalName(id)) +
         (isActive ? '<span class="scope-badge">● En cours</span>' : '') +
       '</button>' +
       '<div class="scope-actions">' +
         (isActive ? '' : '<button type="button" class="btn btn--white btn--sm" data-activate="' + id + '">Activer</button>') +
+        (id ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-rename="' + id + '" aria-label="Renommer">✎</button>' : '') +
+        (id ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-delete="' + id + '" aria-label="Supprimer">🗑</button>' : '') +
       '</div>' +
     '</div>';
   }).join('');
@@ -456,61 +453,38 @@ function renderScopeList(){
     btn.addEventListener('click', function(){
       state.selectedScope = btn.getAttribute('data-scope');
       renderScopeList();
+      renderClassement();
       renderStats();
     });
   });
   $('scope-list').querySelectorAll('[data-activate]').forEach(function(btn){
     btn.addEventListener('click', function(){ activateScope(btn.getAttribute('data-activate')); });
   });
+  $('scope-list').querySelectorAll('[data-rename]').forEach(function(btn){
+    btn.addEventListener('click', function(){ renameFestival(btn.getAttribute('data-rename')); });
+  });
+  $('scope-list').querySelectorAll('[data-delete]').forEach(function(btn){
+    btn.addEventListener('click', function(){ deleteFestival(btn.getAttribute('data-delete')); });
+  });
 }
 
 /* ============================================================================
-   STATS — scopées sur state.selectedScope
+   STATS — scopées sur state.selectedScope. Simplifié le 07.09.2026 (demande
+   explicite de Sam) : seuls le nb de parties, le temps moyen et le % arrivés
+   au bout restent. L'ancien détail (temps médian, répartition des causes de
+   perte, distractions qui font le plus perdre) a été retiré.
    ============================================================================ */
-var CAUSE_LABELS = {
-  deux_doigts: 'Deux doigts posés',
-  jauge: 'Jauge de risque pleine',
-  action_ratee: 'Action ratée',
-  leurre: 'Piégé par un leurre',
-  cap: 'Arrivé au bout (45s)'
-};
-
 function fmtSec(ms){ return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; }
 
-// Échappement HTML — toute donnée provenant de /runs (handle, distractionId…)
-// est écrite côté client sans authentification (règles Firebase : create
-// public), donc jamais fiable telle quelle avant une insertion via innerHTML.
+// Échappement HTML — toute donnée provenant de /runs (handle…) est écrite
+// côté client sans authentification (règles Firebase : create public), donc
+// jamais fiable telle quelle avant une insertion via innerHTML. Les noms de
+// festival (admin uniquement) n'ont pas ce risque mais passent par la même
+// fonction par cohérence/simplicité.
 function escapeHtml(str){
   return String(str).replace(/[&<>"']/g, function(c){
     return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
   });
-}
-
-function median(sortedNums){
-  var n = sortedNums.length;
-  if (!n) return 0;
-  var mid = Math.floor(n / 2);
-  return n % 2 ? sortedNums[mid] : (sortedNums[mid - 1] + sortedNums[mid]) / 2;
-}
-
-function prettyDistractionId(id){
-  var pretty = id.replace(/_/g, ' ').replace(/^./, function(c){ return c.toUpperCase(); });
-  return escapeHtml(pretty);
-}
-
-function renderBars(container, entries, total){
-  // entries: [[label, count], ...] déjà triés décroissant
-  if (!entries.length){
-    container.innerHTML = '<p class="empty-note">Aucune donnée pour ce classement.</p>';
-    return;
-  }
-  container.innerHTML = entries.map(function(e){
-    var pct = total ? Math.round(e[1] / total * 100) : 0;
-    return '<div class="bar-row">' +
-      '<div class="bar-label"><span>' + e[0] + '</span><span>' + e[1] + ' (' + pct + ' %)</span></div>' +
-      '<div class="bar-track"><div class="bar-fill" style="width:' + pct + '%"></div></div>' +
-    '</div>';
-  }).join('');
 }
 
 function scopedRuns(){
@@ -519,9 +493,6 @@ function scopedRuns(){
 }
 
 function renderStats(){
-  $('scope-selected-label').textContent = festivalName(state.selectedScope);
-  $('classement-scope-label').textContent = festivalName(state.selectedScope);
-
   var runs = scopedRuns();
   var total = runs.length;
 
@@ -529,53 +500,29 @@ function renderStats(){
 
   if (!total){
     $('stat-avg').textContent = '—';
-    $('stat-median').textContent = '—';
     $('stat-cap').textContent = '—';
-    renderBars($('cause-breakdown'), [], 0);
-    renderBars($('distraction-breakdown'), [], 0);
     return;
   }
 
-  var scores = runs.map(function(r){ return r.scoreMs || 0; }).sort(function(a, b){ return a - b; });
+  var scores = runs.map(function(r){ return r.scoreMs || 0; });
   var avgMs = scores.reduce(function(s, v){ return s + v; }, 0) / total;
   $('stat-avg').textContent = fmtSec(avgMs);
-  $('stat-median').textContent = fmtSec(median(scores));
 
   var capCount = runs.filter(function(r){ return r.cause === 'cap'; }).length;
   $('stat-cap').textContent = capCount + ' (' + Math.round(capCount / total * 100) + ' %)';
-
-  // Causes — les 5 catégories connues, même si certaines sont à 0 (utile de
-  // voir qu'une cause n'est jamais arrivée, pas juste l'omettre).
-  var causeCounts = {};
-  Object.keys(CAUSE_LABELS).forEach(function(c){ causeCounts[c] = 0; });
-  runs.forEach(function(r){ if (causeCounts[r.cause] != null) causeCounts[r.cause]++; });
-  var causeEntries = Object.keys(causeCounts)
-    .map(function(c){ return [CAUSE_LABELS[c], causeCounts[c]]; })
-    .sort(function(a, b){ return b[1] - a[1]; });
-  renderBars($('cause-breakdown'), causeEntries, total);
-
-  // Distractions — seulement celles réellement responsables d'une perte
-  // (distractionId non nul, donc action_ratee/leurre), triées par fréquence.
-  var distCounts = {};
-  runs.forEach(function(r){
-    if (!r.distractionId) return;
-    distCounts[r.distractionId] = (distCounts[r.distractionId] || 0) + 1;
-  });
-  var distTotal = Object.keys(distCounts).reduce(function(s, k){ return s + distCounts[k]; }, 0);
-  var distEntries = Object.keys(distCounts)
-    .map(function(id){ return [prettyDistractionId(id), distCounts[id]]; })
-    .sort(function(a, b){ return b[1] - a[1]; })
-    .slice(0, 10);
-  renderBars($('distraction-breakdown'), distEntries, distTotal);
 }
 
 /* ============================================================================
-   POP-UP CLASSEMENT — top 10 PAR JOUEUR (meilleur score de chaque clientId,
-   pas 10 lignes du même joueur qui aurait rejoué plusieurs fois).
+   CLASSEMENT — top 10 PAR JOUEUR (meilleur score de chaque clientId, pas 10
+   lignes du même joueur qui aurait rejoué plusieurs fois), filtré aux seuls
+   joueurs ayant renseigné un pseudo Instagram (demande explicite de Sam —
+   un joueur anonyme compte dans "Parties jouées" mais n'apparaît pas ici).
+   Affiché directement dans la carte "Classement" (avant : pop-up séparée,
+   ouverte à la demande — plus nécessaire vu que tout est temps réel).
    ============================================================================ */
 function topTen(){
-  var best = {}; // clientId -> meilleure run
-  scopedRuns().forEach(function(r){
+  var best = {}; // clientId -> meilleure run, uniquement parmi celles avec un handle
+  scopedRuns().filter(function(r){ return !!r.handle; }).forEach(function(r){
     var key = r.clientId || r.id;
     if (!best[key] || (r.scoreMs || 0) > (best[key].scoreMs || 0)) best[key] = r;
   });
@@ -584,28 +531,19 @@ function topTen(){
     .slice(0, 10);
 }
 
-function openClassement(){
+function renderClassement(){
+  $('scope-selected-label').textContent = festivalName(state.selectedScope);
   var list = topTen();
-  $('classement-scope-label').textContent = festivalName(state.selectedScope);
   if (!list.length){
-    $('classement-list').innerHTML = '<li class="empty-note" style="border:none;">Aucune partie enregistrée pour ce classement.</li>';
-  } else {
-    $('classement-list').innerHTML = list.map(function(r, i){
-      var name = r.handle ? ('@' + escapeHtml(r.handle)) : 'Joueur anonyme';
-      return '<li><span class="rank">' + (i + 1) + '</span>' +
-        '<span class="rank-handle">' + name + '</span>' +
-        '<span class="rank-time">' + fmtSec(r.scoreMs || 0) + '</span></li>';
-    }).join('');
+    $('classement-list').innerHTML = '<li class="empty-note" style="border:none;">Aucune partie avec pseudo pour ce classement.</li>';
+    return;
   }
-  $('modal-classement').classList.add('is-open');
+  $('classement-list').innerHTML = list.map(function(r, i){
+    return '<li><span class="rank">' + (i + 1) + '</span>' +
+      '<span class="rank-handle">@' + escapeHtml(r.handle) + '</span>' +
+      '<span class="rank-time">' + fmtSec(r.scoreMs || 0) + '</span></li>';
+  }).join('');
 }
-function closeClassement(){ $('modal-classement').classList.remove('is-open'); }
-
-$('btn-open-classement').addEventListener('click', openClassement);
-$('btn-classement-close').addEventListener('click', closeClassement);
-$('modal-classement').addEventListener('click', function(e){
-  if (e.target === $('modal-classement')) closeClassement();
-});
 </script>
 </body>
 </html>
