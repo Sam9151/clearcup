@@ -950,13 +950,28 @@
   #screen-revelation{ background:var(--white); }
   .rv-temps{
     display:none; position:absolute; inset:0;
-    flex-direction:column; align-items:center; justify-content:center;
+    flex-direction:column; align-items:center;
     gap:1.1rem; width:100%;
     /* max() plutôt qu'un padding fixe : absorbé par le centrage vertical
        aujourd'hui (le contenu ne remplit pas tout l'écran), mais reste correct
        si le contenu s'allonge un jour ou sur un appareil à encoche plus grande. */
     padding:max(2rem, env(safe-area-inset-top)) 2rem max(2rem, env(safe-area-inset-bottom));
     text-align:center;
+    /* Centré verticalement quand tout tient (cas normal) ; sur un écran trop
+       court pour temps 4 (accroche + carte-preuve + 4 boutons), "safe center"
+       bascule automatiquement en haut plutôt que de couper le contenu par le
+       milieu de façon inaccessible (repli navigateurs anciens : "center"
+       simple ci-dessus reste actif, "safe center" invalide est juste ignoré).
+       overflow-y+touch-action : sans ça le contenu débordant restait
+       purement invisible, coupé en haut ET en bas — body{overflow:hidden}
+       ne scrolle jamais, et *{touch-action:none} désactive le scroll tactile
+       par défaut partout (voir .modal-card pour le même correctif). Bug
+       remonté par Sam le 07.09.2026 : "on ne voit toujours pas le haut et le
+       bas de l'écran" sur le dernier menu de la révélation. */
+    justify-content:center;
+    justify-content:safe center;
+    overflow-y:auto;
+    touch-action:pan-y;
   }
   .rv-temps.is-visible{ display:flex; }
   .rv-temps--blue{ background:var(--blue); } /* fond bleu plat, partagé par les temps 2, 3 et 4 */
@@ -1082,13 +1097,31 @@
      défaut), en premier dans la pile de boutons — c'est l'action qu'on veut
      mettre en avant après la révélation. Voir shareScore()/buildShareCanvas(). */
   #btn-partager{ margin-top:1.1rem; } /* espace intermédiaire avant le CTA */
-  #btn-rejouer{ margin-top:.7rem; }
   /* Retour au menu : même DA que Rejouer (recette .nb-btn — pilule, bordure
      2px, ombre dure) mais en bleu marque, demandé explicitement par Sam.
      .nb-btn est bleu par défaut (voir plus haut) : pas de modificateur à
      ajouter, juste ne PAS mettre .nb-btn--white dessus (contrairement à
      Rejouer). */
-  #btn-retour-menu{ margin-top:.7rem; }
+  .rv-actions-row{
+    display:flex;
+    gap:.6rem;
+    width:100%;
+    max-width:380px; /* aligné sur .rv-card (width:min(84vw,380px)) */
+    margin-top:.7rem;
+  }
+  /* flex:1 + min-width:0 : les deux boutons se partagent la largeur à égalité
+     et le texte peut rétrécir/passer à la ligne plutôt que déborder — sans
+     min-width:0, un flex item ne rétrécit jamais sous sa largeur de contenu
+     naturelle (ici "RETOUR AU MENU" en majuscules, Bagel Fat One, assez
+     large). Padding horizontal réduit pour la même raison. */
+  .rv-actions-row .nb-btn{
+    flex:1;
+    min-width:0;
+    padding-left:1rem;
+    padding-right:1rem;
+    font-size:1.1rem;
+  }
+  #btn-pseudo-manage{ margin-top:.6rem; } /* respiration avant ce lien secondaire, absente jusqu'ici */
 </style>
 </head>
 <body>
@@ -1352,8 +1385,15 @@
 </svg></div>
       </div>
       <button type="button" id="btn-partager" class="nb-btn">Partager mon score</button>
-      <button type="button" id="btn-rejouer" class="nb-btn nb-btn--white">Rejouer</button>
-      <button type="button" id="btn-retour-menu" class="nb-btn">Retour au menu</button>
+      <!-- Rejouer + Retour au menu côte à côte (avant : empilés en pleine
+           largeur comme Partager) — gagne la hauteur d'un bouton entier sur
+           ce dernier écran déjà chargé (carte-preuve + logo + 4 actions),
+           demande explicite de Sam le 07.09.2026 suite au retour "on ne voit
+           toujours pas le haut et le bas de l'écran". -->
+      <div class="rv-actions-row">
+        <button type="button" id="btn-rejouer" class="nb-btn nb-btn--white">Rejouer</button>
+        <button type="button" id="btn-retour-menu" class="nb-btn">Retour au menu</button>
+      </div>
       <!-- Ajouté le 07.09.2026 : avant, le pseudo Instagram ne pouvait être
            saisi qu'une seule fois, au tout premier lancement (#modal-instagram
            ne se redéclenchait jamais, voir instagramAlreadyAsked()) — un

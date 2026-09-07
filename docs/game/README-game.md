@@ -608,3 +608,31 @@ règles actuelles dans la console Firebase par la version complète incluant
     lp-firebase.js pour le bloc consolidé à recoller dans la console.
   - Vérifié : syntaxe JS de `stats.html` validée, tous les ID HTML
     référencés en JS existent, chargement HTTP 200 via serveur local.
+
+- **07.09.2026** — Retour "on ne voit toujours pas le haut et le bas de
+  l'écran" sur le dernier menu de la révélation (`#rv-temps-4`), malgré le
+  correctif `100dvh` de la veille. Cause racine différente et distincte de
+  celle-là (pas de correctif sans avoir trouvé la cause) : `.rv-temps` est
+  centré verticalement (`justify-content:center`) SANS pouvoir défiler
+  (`body{overflow:hidden}` global + `*{touch-action:none}` désactivant le
+  scroll tactile par défaut). Le contenu de temps 4 (accroche + carte-preuve
+  + logo + 4 boutons) dépasse la hauteur visible sur beaucoup de téléphones
+  (surtout barre d'URL Safari visible) : l'excédent était coupé en haut ET
+  en bas, invisible, sans indice qu'il manquait quelque chose. Corrigé :
+  - `.rv-temps` peut désormais défiler si besoin (`overflow-y:auto` +
+    `touch-action:pan-y`, même recette que `.modal-card`) — plus jamais rien
+    de cité comme invisible, sur aucun écran. `justify-content:safe center`
+    (avec repli `center` simple pour les navigateurs plus anciens) garde le
+    centrage habituel quand tout tient, et bascule en haut seulement quand
+    le contenu déborde.
+  - Boutons "Rejouer" et "Retour au menu" passés côte à côte
+    (`.rv-actions-row`, `flex:1` chacun) au lieu d'empilés en pleine largeur
+    — gagne la hauteur d'un bouton entier sur cet écran déjà chargé (3
+    options de réagencement proposées à Sam, celle-ci choisie). "Partager
+    mon score" reste seul en haut (CTA principal). Petite marge ajoutée
+    au-dessus du bouton "gérer mon pseudo" au passage (absente jusqu'ici,
+    collé au bouton précédent).
+  - Vérifié : syntaxe JS validée, tous les ID HTML référencés en JS
+    existent, chargement HTTP 200 via serveur local. Rendu visuel réel non
+    vérifié de mon côté (pas d'automatisation navigateur disponible cette
+    session) — à confirmer par Sam sur son téléphone.
