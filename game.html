@@ -7,6 +7,15 @@
 <meta name="description" content="Combien de temps tu tiens à surveiller ton verre ? Un jeu ClearCup.">
 <title>Lâche pas — ClearCup</title>
 
+<!-- Icône d'onglet navigateur — absente jusqu'ici (seul apple-touch-icon
+     existait, qui sert à l'icône "écran d'accueil" iOS, pas à l'onglet).
+     Sans cette balise, Safari ne va pas forcément chercher /favicon.ico
+     tout seul (contrairement à Chrome) : bug remonté par Sam le 07.09.2026
+     ("mauvais favicon affiché"). -->
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon_32.png">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+
 <!-- PWA — manifeste et icônes propres au jeu (pas ceux du site principal,
      voir lp-manifest.json : name/start_url/scope différents, mêmes icônes
      assets réutilisées telles quelles). -->
