@@ -579,3 +579,32 @@ règles actuelles dans la console Firebase par la version complète incluant
     serveur local. Correction visuelle iPhone non vérifiée visuellement de
     mon côté (pas d'automatisation navigateur disponible cette session) —
     à confirmer par Sam sur son téléphone.
+
+- **07.09.2026** — Retour "je viens de faire une partie, elle n'apparaît
+  toujours pas dans le classement". Debug systématique (pas de correctif
+  sans avoir trouvé la cause) :
+  - **Cause racine trouvée** : `lp-sw.js` sert `game.html`/`lp-firebase.js`
+    en cache-d'abord, mise à jour seulement "au prochain lancement" — et son
+    `CACHE_NAME` n'avait jamais été incrémenté malgré tous les changements
+    de cette session. Un appareil ayant déjà ouvert le jeu avant le dernier
+    push a donc très probablement rejoué avec l'ANCIEN code (anciens noms
+    de distraction) une fois les nouvelles règles Firebase déjà publiées —
+    écriture rejetée en silence, partie jamais dans `/runs`. Corrigé :
+    `CACHE_NAME` bumpé (`v1` → `v2`) + commentaire rappelant de le refaire à
+    chaque futur changement d'un fichier du jeu.
+  - **Retiré au passage (demande explicite de Sam, "le code est public de
+    toute façon, l'authentification ne sert à rien")** : la page de
+    connexion plein écran de `stats.html`. Nuance apportée à Sam et actée
+    avec lui : la config Firebase est en effet publique dans TOUTE appli
+    Firebase (jamais un secret), mais ce n'était pas le rôle de
+    l'authentification ici — elle protégeait la lecture/écriture via les
+    règles Realtime Database. Décision retenue : lecture PUBLIQUE
+    (classement + stats visibles sans connexion, pratique pour un écran
+    diffusé en direct au festival), gestion des festivals (créer/renommer/
+    supprimer/activer) toujours réservée à l'admin connecté derrière un
+    bouton "Connexion admin" discret (`#login-card`, replié par défaut).
+    Règles Firebase mises à jour en conséquence (`runs`/`festivals`.read
+    passent à `true`, écriture de `festivals` reste `auth != null`) — voir
+    lp-firebase.js pour le bloc consolidé à recoller dans la console.
+  - Vérifié : syntaxe JS de `stats.html` validée, tous les ID HTML
+    référencés en JS existent, chargement HTTP 200 via serveur local.

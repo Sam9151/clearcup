@@ -12,17 +12,26 @@
 //
 // Règles de sécurité correspondantes à coller dans la console Firebase
 // (Realtime Database → Règles). Mis à jour pour le mode festival
-// (stats.html) : "festivals" (liste des festivals créés, admin uniquement)
-// et "activeFestivalId" (pointeur vers le festival actif, lecture PUBLIQUE
-// nécessaire — le jeu doit pouvoir le lire avant chaque partie pour taguer
-// la partie, voir getActiveFestivalId() dans game.html — écriture réservée
-// à l'admin). "runs" gagne le champ festivalId, même logique que
-// distractionId (optionnel, null = mode Général) :
+// (stats.html) : "festivals" (liste des festivals créés) et
+// "activeFestivalId" (pointeur vers le festival actif) — le jeu doit
+// pouvoir lire "activeFestivalId" avant chaque partie pour taguer la
+// partie, voir getActiveFestivalId() dans game.html. "runs" gagne le champ
+// festivalId, même logique que distractionId (optionnel, null = mode
+// Général) :
+//
+// Lecture PUBLIQUE sur "runs"/"festivals"/"activeFestivalId" depuis le
+// 07.09.2026 (décision explicite de Sam — le classement stats.html doit
+// pouvoir s'afficher sans connexion, par ex. sur un écran diffusé en
+// direct au festival ; la config Firebase est de toute façon déjà visible
+// côté client, l'authentification n'a jamais été une protection du CODE,
+// seulement de la LECTURE/ÉCRITURE via ces règles). Seule l'ÉCRITURE de
+// "festivals" (créer/renommer/supprimer un festival, voir stats.html)
+// reste réservée à "auth != null" :
 //
 // {
 //   "rules": {
 //     "runs": {
-//       ".read": "auth != null",
+//       ".read": true,
 //       "$runId": {
 //         ".write": "!data.exists()",
 //         ".validate": "newData.hasChildren(['scoreMs','cause','clientId','gameVersion','createdAt'])",
@@ -43,7 +52,7 @@
 //       }
 //     },
 //     "festivals": {
-//       ".read": "auth != null",
+//       ".read": true,
 //       "$festivalId": {
 //         // ".write" ouvert à tout admin authentifié (pas seulement la
 //         // création comme avant le 07.09.2026) : stats.html permet

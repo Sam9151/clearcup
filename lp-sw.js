@@ -11,7 +11,20 @@
 // dans GAME_FILES ci-dessous. Pour tout le reste — y compris index.html —
 // on laisse l'événement fetch filer sans y toucher : le navigateur traite
 // la requête normalement, comme si ce service worker n'existait pas.
-var CACHE_NAME = 'lp-cache-v1';
+// IMPORTANT : incrémenter ce numéro à CHAQUE modification d'un des fichiers
+// listés dans GAME_FILES (game.html, lp-firebase.js, lp-firebase-config.js,
+// lp-manifest.json, lp-percentiles.json, polices/icônes). Le fetch handler
+// ci-dessous sert le cache existant en priorité et ne rafraîchit qu'en
+// tâche de fond ("le joueur profite de la dernière version au PROCHAIN
+// lancement") — sans ce bump, un appareil ayant déjà ouvert le jeu avant un
+// déploiement continue de jouer avec l'ancien code au moins une partie de
+// plus. Bug découvert le 07.09.2026 : le renommage de 3 distractions n'a
+// jamais bumpé cette valeur, alors que les règles Firebase (nouvelles) ont
+// été publiées entre-temps — un appareil resté sur l'ancien cache envoyait
+// donc un ancien nom de distraction, rejeté par les nouvelles règles, et la
+// partie disparaissait silencieusement (jamais dans /runs, donc jamais dans
+// stats.html).
+var CACHE_NAME = 'lp-cache-v2';
 
 var GAME_FILES = [
   '/game.html',

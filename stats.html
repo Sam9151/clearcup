@@ -13,7 +13,7 @@
   cette page PARLE DIRECTEMENT à Firebase (Auth + Realtime Database) : le
   découplage localStorage/événement de game.html existe pour que le jeu
   reste jouable hors-ligne, une contrainte qui n'a aucun sens ici (page
-  admin, forcément en ligne, forcément authentifiée).
+  admin, forcément en ligne).
 
   Refonte du 07.09.2026 (retours de tests) — voir docs/game/README-game.md
   pour le détail des bugs corrigés côté game.html/lp-firebase.js (parties
@@ -30,10 +30,23 @@
     "Distractions qui font le plus perdre" (demande explicite de Sam —
     "le plus simple possible, quitte à enlever des stats").
 
+  Deuxième refonte du 07.09.2026 (même jour, retour "l'authentification ne
+  sert à rien puisque le code est public") : la config Firebase est en
+  effet toujours visible côté client (normal, ce n'est pas un secret, voir
+  toute appli Firebase) — mais ça n'a jamais été le rôle de l'authentification
+  ici, qui protège la LECTURE/ÉCRITURE via les règles Realtime Database, pas
+  le code. Décision retenue (choix explicite de Sam) : lecture PUBLIQUE
+  (classement + stats visibles par n'importe qui, sans connexion — pratique
+  pour un écran affiché en direct au festival), gestion des festivals
+  (créer/renommer/supprimer/activer) toujours réservée à l'admin connecté.
+  Plus de page de connexion plein écran bloquante : le dashboard s'affiche
+  tout de suite, une zone "Connexion admin" discrète (voir #login-card)
+  révèle le formulaire à la demande et fait apparaître les boutons de
+  gestion une fois connecté.
+
   Sécurité : voir lp-firebase.js pour les règles Realtime Database à jour
-  (festivals + activeFestivalId + festivalId dans runs). Le rename/delete
-  de festival ci-dessous suppose "festivals/$festivalId".write déjà ouvert
-  à tout admin authentifié (plus seulement la création, voir lp-firebase.js).
+  ("runs" et "festivals" en lecture publique désormais, écriture de
+  "festivals" toujours réservée à "auth != null").
   ============================================================================
 -->
 
@@ -106,25 +119,20 @@
     color:var(--ink);
   }
 
-  /* ---- Connexion ---- */
-  #view-login{
-    min-height:100vh;
-    display:flex; align-items:center; justify-content:center;
-    padding:1.5rem;
-  }
-  #view-login .card{ width:100%; max-width:360px; margin:0; }
-  #view-login h1{ font-size:1.6rem; margin-bottom:1.25rem; text-align:center; }
-  #view-login label{ display:block; font-size:.85rem; font-weight:700; margin:.9rem 0 .3rem; }
+  /* ---- Connexion admin (carte discrète, plus de page plein écran) ---- */
+  #login-card{ max-width:360px; }
+  #login-card label{ display:block; font-size:.85rem; font-weight:700; margin:.9rem 0 .3rem; }
+  #login-card label:first-of-type{ margin-top:0; }
   #login-error{ color:#C0392B; font-size:.85rem; margin-top:.8rem; min-height:1.2em; }
-  #btn-login{ width:100%; margin-top:1.3rem; }
+  #btn-login{ width:100%; margin-top:1.1rem; }
 
   /* ---- Dashboard ---- */
-  #view-dashboard{ display:none; }
   header.top{
     display:flex; align-items:center; justify-content:space-between; gap:1rem;
     margin-bottom:1.25rem; flex-wrap:wrap;
   }
   header.top h1{ font-size:1.5rem; }
+  #admin-zone{ display:flex; gap:.6rem; align-items:center; }
 
   #banner-error{
     display:none;
@@ -198,28 +206,30 @@
 </head>
 <body>
 
-<!-- ============ Connexion ============ -->
-<div id="view-login">
-  <div class="card">
-    <h1>Lâche pas</h1>
-    <form id="form-login">
-      <label for="login-email">E-mail</label>
-      <input type="email" id="login-email" autocomplete="username" required>
-      <label for="login-password">Mot de passe</label>
-      <input type="password" id="login-password" autocomplete="current-password" required>
-      <p id="login-error"></p>
-      <button type="submit" class="btn" id="btn-login">Se connecter</button>
-    </form>
-  </div>
-</div>
-
-<!-- ============ Dashboard ============ -->
+<!-- ============ Dashboard — lecture publique, gestion réservée à l'admin ============ -->
 <div id="view-dashboard">
   <div class="wrap">
     <header class="top">
       <h1>Lâche pas — Stats</h1>
-      <button type="button" class="btn btn--white btn--sm" id="btn-logout">Se déconnecter</button>
+      <div id="admin-zone">
+        <button type="button" class="btn btn--white btn--sm" id="btn-toggle-login">Connexion admin</button>
+        <button type="button" class="btn btn--white btn--sm" id="btn-logout" hidden>Se déconnecter</button>
+      </div>
     </header>
+
+    <!-- Repliée par défaut : seule la gestion (créer/renommer/supprimer un
+         festival, changer le mode actif) est réservée à l'admin — le
+         classement et les stats ci-dessous restent visibles sans connexion. -->
+    <div class="card" id="login-card" hidden>
+      <form id="form-login">
+        <label for="login-email">E-mail</label>
+        <input type="email" id="login-email" autocomplete="username" required>
+        <label for="login-password">Mot de passe</label>
+        <input type="password" id="login-password" autocomplete="current-password" required>
+        <p id="login-error"></p>
+        <button type="submit" class="btn" id="btn-login">Se connecter</button>
+      </form>
+    </div>
 
     <p id="banner-error"></p>
 
@@ -228,7 +238,7 @@
     <div class="card">
       <h2 style="font-size:1.1rem; margin-bottom:.75rem;">Classements</h2>
       <div id="scope-list"><p class="empty-note">Chargement…</p></div>
-      <div class="new-festival">
+      <div class="new-festival" id="new-festival-row" hidden>
         <input type="text" id="input-new-festival" placeholder="Nom du nouveau festival" maxlength="80">
         <button type="button" class="btn btn--sm" id="btn-create-festival">+ Créer</button>
       </div>
@@ -277,7 +287,9 @@ var state = {
   festivals: {},         // { festivalId: { name, createdAt } }
   activeFestivalId: '',  // '' = mode Général
   selectedScope: '',     // '' = Général, sinon un festivalId — ce qu'on est en train de regarder
-  runs: []                // toutes les parties, mises à jour en direct depuis /runs
+  runs: [],               // toutes les parties, mises à jour en direct depuis /runs
+  isAdmin: false          // connecté (Firebase Auth) — contrôle uniquement l'affichage des actions
+                          // de gestion (créer/renommer/supprimer/activer) ; lecture toujours publique
 };
 
 function showError(msg){
@@ -287,13 +299,26 @@ function showError(msg){
 }
 
 /* ============================================================================
-   CONNEXION
+   CONNEXION ADMIN — n'affecte plus l'accès en lecture (classement/stats
+   visibles par tout le monde, voir startListeners() appelé sans condition
+   plus bas) : sert uniquement à débloquer les actions de gestion des
+   festivals (créer/renommer/supprimer/activer), toujours protégées côté
+   règles Firebase par "auth != null". Carte repliée par défaut, ouverte via
+   le bouton "Connexion admin" dans l'en-tête.
    ============================================================================ */
+$('btn-toggle-login').addEventListener('click', function(){
+  $('login-card').hidden = !$('login-card').hidden;
+});
+
 $('form-login').addEventListener('submit', function(e){
   e.preventDefault();
   $('login-error').textContent = '';
   $('btn-login').disabled = true;
   signInWithEmailAndPassword(auth, $('login-email').value.trim(), $('login-password').value)
+    .then(function(){
+      $('form-login').reset();
+      $('login-card').hidden = true;
+    })
     .catch(function(err){
       $('login-error').textContent = "Connexion impossible — vérifie l'e-mail et le mot de passe.";
       console.warn('[stats] échec connexion', err);
@@ -304,15 +329,11 @@ $('form-login').addEventListener('submit', function(e){
 $('btn-logout').addEventListener('click', function(){ signOut(auth); });
 
 onAuthStateChanged(auth, function(user){
-  if (user){
-    $('view-login').style.display = 'none';
-    $('view-dashboard').style.display = 'block';
-    startListeners();
-  } else {
-    $('view-dashboard').style.display = 'none';
-    $('view-login').style.display = 'flex';
-    stopListeners();
-  }
+  state.isAdmin = !!user;
+  $('btn-toggle-login').hidden = !!user;
+  $('btn-logout').hidden = !user;
+  $('new-festival-row').hidden = !user;
+  renderScopeList(); // seule vue qui dépend de isAdmin (boutons Activer/✎/🗑)
 });
 
 /* ============================================================================
@@ -320,11 +341,14 @@ onAuthStateChanged(auth, function(user){
    qui dépend d'elle dès que Firebase pousse un changement. Remplace l'ancien
    loadAll() sur get() + bouton "Actualiser" (décision explicite revue par
    Sam le 07.09.2026 : le classement doit être à jour tout seul, vite).
+   Démarrées une seule fois, tout de suite (appel juste après cette
+   définition) : la lecture est publique désormais, plus besoin d'attendre
+   une connexion admin pour afficher classement/stats.
    ============================================================================ */
 var unsubscribers = [];
 
 function startListeners(){
-  if (unsubscribers.length) return; // déjà démarré (ex: reconnexion sans reload de page)
+  if (unsubscribers.length) return; // déjà démarré, ne rien dupliquer
 
   unsubscribers.push(onValue(ref(db, 'festivals'), function(snap){
     state.festivals = snap.exists() ? snap.val() : {};
@@ -366,13 +390,13 @@ function startListeners(){
   }));
 }
 
-function stopListeners(){
-  unsubscribers.forEach(function(unsub){ unsub(); });
-  unsubscribers = [];
-}
+startListeners();
 
 /* ============================================================================
-   FESTIVALS — créer, activer, renommer, supprimer.
+   FESTIVALS — créer, activer, renommer, supprimer (actions réservées à
+   l'admin connecté, boutons masqués sinon — voir renderScopeList()). Les
+   règles Firebase ("auth != null" sur festivals.write) referment de toute
+   façon la porte côté serveur si jamais un appel arrivait sans connexion.
    ============================================================================ */
 $('btn-create-festival').addEventListener('click', function(){
   var name = $('input-new-festival').value.trim();
@@ -435,16 +459,18 @@ function renderScopeList(){
   var html = scopes.map(function(id){
     var isActive = id === (state.activeFestivalId || '');
     var isSelected = id === state.selectedScope;
+    // Boutons de gestion masqués pour un visiteur non connecté — lecture
+    // (nom, badge "en cours", sélection du classement) reste toujours publique.
+    var actions = !state.isAdmin ? '' :
+      (isActive ? '' : '<button type="button" class="btn btn--white btn--sm" data-activate="' + id + '">Activer</button>') +
+      (id ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-rename="' + id + '" aria-label="Renommer">✎</button>' : '') +
+      (id ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-delete="' + id + '" aria-label="Supprimer">🗑</button>' : '');
     return '<div class="scope-row' + (isSelected ? ' is-selected' : '') + '">' +
       '<button type="button" class="scope-name-btn" data-scope="' + id + '">' +
         escapeHtml(festivalName(id)) +
         (isActive ? '<span class="scope-badge">● En cours</span>' : '') +
       '</button>' +
-      '<div class="scope-actions">' +
-        (isActive ? '' : '<button type="button" class="btn btn--white btn--sm" data-activate="' + id + '">Activer</button>') +
-        (id ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-rename="' + id + '" aria-label="Renommer">✎</button>' : '') +
-        (id ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-delete="' + id + '" aria-label="Supprimer">🗑</button>' : '') +
-      '</div>' +
+      '<div class="scope-actions">' + actions + '</div>' +
     '</div>';
   }).join('');
   $('scope-list').innerHTML = html;
@@ -457,15 +483,17 @@ function renderScopeList(){
       renderStats();
     });
   });
-  $('scope-list').querySelectorAll('[data-activate]').forEach(function(btn){
-    btn.addEventListener('click', function(){ activateScope(btn.getAttribute('data-activate')); });
-  });
-  $('scope-list').querySelectorAll('[data-rename]').forEach(function(btn){
-    btn.addEventListener('click', function(){ renameFestival(btn.getAttribute('data-rename')); });
-  });
-  $('scope-list').querySelectorAll('[data-delete]').forEach(function(btn){
-    btn.addEventListener('click', function(){ deleteFestival(btn.getAttribute('data-delete')); });
-  });
+  if (state.isAdmin){
+    $('scope-list').querySelectorAll('[data-activate]').forEach(function(btn){
+      btn.addEventListener('click', function(){ activateScope(btn.getAttribute('data-activate')); });
+    });
+    $('scope-list').querySelectorAll('[data-rename]').forEach(function(btn){
+      btn.addEventListener('click', function(){ renameFestival(btn.getAttribute('data-rename')); });
+    });
+    $('scope-list').querySelectorAll('[data-delete]').forEach(function(btn){
+      btn.addEventListener('click', function(){ deleteFestival(btn.getAttribute('data-delete')); });
+    });
+  }
 }
 
 /* ============================================================================
