@@ -159,6 +159,14 @@
     opacity:1;
     pointer-events:auto;
   }
+  /* Filet de sécurité pour l'accueil, spécifiquement (pas .screen en
+     général : #screen-jeu a besoin de *{touch-action:none} intact pour son
+     tenu/glisser au doigt — l'étendre à tous les écrans casserait le jeu).
+     Même recette que .rv-temps (voir plus bas) : le 4e bouton du menu
+     ajouté le 07.09.2026 (gérer le pseudo) allonge cet écran, avec le même
+     risque de contenu coupé en haut/bas sur un téléphone court. */
+  #screen-accueil{ overflow-y:auto; justify-content:safe center; }
+  #screen-accueil, #screen-accueil *{ touch-action:pan-y; }
   body.reduced-fx .screen{ transition:none; }
 
   /* Verrouillage paysage — CSS pur, ne dépend d'aucun JS pour s'afficher */
@@ -534,6 +542,12 @@
     text-align:center;
     letter-spacing:.02em;
   }
+  /* Lien secondaire ("Ajouter"/"Modifier mon pseudo Instagram"), déplacé
+     depuis l'écran de révélation le 07.09.2026 — reste discret comme avant
+     (largeur au contenu plutôt que pleine largeur comme les 3 boutons
+     principaux, même recette que .mi-later pour "Plus tard" dans la popup
+     Instagram) : id plus spécifique que .accueil-menu .nb-btn ci-dessus. */
+  #btn-pseudo-manage{ width:fit-content; margin:0 auto; }
   /* Pulsation très lente et discrète du CTA principal, pour attirer l'œil
      sans être criarde. box-shadow plutôt que transform/scale : .nb-btn:active
      pilote déjà transform pour le retour de pression, les deux entreraient en
@@ -962,18 +976,24 @@
        bascule automatiquement en haut plutôt que de couper le contenu par le
        milieu de façon inaccessible (repli navigateurs anciens : "center"
        simple ci-dessus reste actif, "safe center" invalide est juste ignoré).
-       overflow-y+touch-action : sans ça le contenu débordant restait
-       purement invisible, coupé en haut ET en bas — body{overflow:hidden}
-       ne scrolle jamais, et *{touch-action:none} désactive le scroll tactile
-       par défaut partout (voir .modal-card pour le même correctif). Bug
-       remonté par Sam le 07.09.2026 : "on ne voit toujours pas le haut et le
-       bas de l'écran" sur le dernier menu de la révélation. */
+       overflow-y : sans ça le contenu débordant restait purement invisible,
+       coupé en haut ET en bas — body{overflow:hidden} ne scrolle jamais. Le
+       touch-action:pan-y nécessaire pour que ça défile réellement au doigt
+       est posé juste en dessous (règle séparée) : *{touch-action:none} donne
+       sa PROPRE valeur "none" à CHAQUE élément, enfants compris — mettre
+       pan-y seulement ici ne suffit pas, un doigt posé sur un enfant (texte,
+       carte, bouton — donc presque tout l'écran) restait bloqué par sa
+       propre valeur "none", plus précise que celle du parent. Bug persistant
+       remonté par Sam le 07.09.2026 malgré un premier correctif incomplet. */
     justify-content:center;
     justify-content:safe center;
     overflow-y:auto;
-    touch-action:pan-y;
   }
   .rv-temps.is-visible{ display:flex; }
+  /* Voir commentaire ci-dessus : réaffecte pan-y à CHAQUE descendant, pas
+     seulement au conteneur, pour que le scroll fonctionne quel que soit
+     l'élément sous le doigt. */
+  .rv-temps, .rv-temps *{ touch-action:pan-y; }
   .rv-temps--blue{ background:var(--blue); } /* fond bleu plat, partagé par les temps 2, 3 et 4 */
   /* Indice discret : la révélation avance maintenant au tap, pas toute seule
      (voir runRevelation()/advanceRevelation()) — sans ça rien n'indique au
@@ -1121,7 +1141,6 @@
     padding-right:1rem;
     font-size:1.1rem;
   }
-  #btn-pseudo-manage{ margin-top:.6rem; } /* respiration avant ce lien secondaire, absente jusqu'ici */
 </style>
 </head>
 <body>
@@ -1238,6 +1257,14 @@
       <button type="button" id="btn-commencer" class="nb-btn">Commencer</button>
       <button type="button" id="btn-classement" class="nb-btn nb-btn--white">Classement</button>
       <button type="button" id="btn-regles" class="nb-btn nb-btn--white">Règles</button>
+      <!-- Déplacé depuis l'écran de révélation le 07.09.2026 (demande
+           explicite de Sam) : "Ajouter" si le joueur n'a jamais renseigné de
+           pseudo, "Modifier" sinon (texte mis à jour dynamiquement par
+           updatePseudoManageButton(), voir updatePlayerHeader() — appelée à
+           chaque retour au menu, donc toujours à jour peu importe où vit ce
+           bouton dans le DOM). Rouvre #modal-instagram, préremplie si un
+           pseudo existe déjà. -->
+      <button type="button" id="btn-pseudo-manage" class="nb-btn nb-btn--white nb-btn--sm"></button>
     </div>
   </section>
 
@@ -1394,13 +1421,6 @@
         <button type="button" id="btn-rejouer" class="nb-btn nb-btn--white">Rejouer</button>
         <button type="button" id="btn-retour-menu" class="nb-btn">Retour au menu</button>
       </div>
-      <!-- Ajouté le 07.09.2026 : avant, le pseudo Instagram ne pouvait être
-           saisi qu'une seule fois, au tout premier lancement (#modal-instagram
-           ne se redéclenchait jamais, voir instagramAlreadyAsked()) — un
-           joueur qui passait ("Plus tard") restait anonyme pour toujours,
-           sans recours. Ce bouton réutilise la même popup, texte mis à jour
-           dynamiquement par updatePseudoManageButton(). -->
-      <button type="button" id="btn-pseudo-manage" class="nb-btn nb-btn--white nb-btn--sm"></button>
     </div>
   </section>
 
@@ -2102,7 +2122,8 @@
     elAccueilPlayer.hidden = false;
   }
 
-  // Bouton sur l'écran de révélation (voir plus haut, ajouté le 07.09.2026) :
+  // Bouton du menu principal (voir plus haut, ajouté sur la révélation le
+  // 07.09.2026 puis déplacé ici le même jour à la demande de Sam) :
   // "Ajouter" si le joueur n'a jamais renseigné de pseudo, "Modifier" sinon
   // — dans les deux cas ça rouvre #modal-instagram, préremplie si un pseudo
   // existe déjà.

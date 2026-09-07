@@ -636,3 +636,32 @@ règles actuelles dans la console Firebase par la version complète incluant
     existent, chargement HTTP 200 via serveur local. Rendu visuel réel non
     vérifié de mon côté (pas d'automatisation navigateur disponible cette
     session) — à confirmer par Sam sur son téléphone.
+
+- **07.09.2026** — Retour "on peut toujours pas scroll" : le correctif
+  précédent (`overflow-y:auto` + `touch-action:pan-y` sur `.rv-temps`) était
+  incomplet. Cause exacte : `*{touch-action:none}` (reset global du fichier)
+  donne sa PROPRE valeur "none" à chaque élément, enfants compris — poser
+  `pan-y` seulement sur `.rv-temps` ne suffit pas, un doigt posé sur
+  n'importe quel enfant (texte, carte, bouton — donc presque tout l'écran)
+  reste bloqué par sa propre valeur, plus spécifique que celle du parent.
+  Corrigé : `.rv-temps, .rv-temps *{ touch-action:pan-y; }` — réaffecte
+  pan-y à chaque descendant explicitement.
+  - Au passage, appliqué le même filet de sécurité à `#screen-accueil`
+    (`overflow-y:auto` + `justify-content:safe center` + pan-y sur tous ses
+    descendants) : le nouveau 4e bouton du menu (voir ci-dessous) allonge cet
+    écran, avec le même risque de contenu coupé sur un téléphone court.
+    Jamais étendu à `.screen` en général : `#screen-jeu` a besoin de
+    `touch-action:none` intact pour son tenu/glisser au doigt pendant la
+    partie — l'étendre à tous les écrans aurait cassé le jeu.
+  - **Bouton "gérer mon pseudo Instagram" déplacé** de l'écran de révélation
+    vers le menu principal (`.accueil-menu`, après "Règles"), demande
+    explicite de Sam. Aucun changement de comportement (toujours
+    `updatePseudoManageButton()`/`#modal-instagram`), juste son emplacement
+    dans le DOM — `updatePlayerHeader()` étant déjà appelée à chaque retour
+    au menu, le texte "Ajouter"/"Modifier" reste à jour peu importe où vit
+    ce bouton.
+  - Vérifié : syntaxe JS validée, tous les ID HTML référencés en JS
+    existent (un seul `#btn-pseudo-manage` dans le document), chargement
+    HTTP 200 via serveur local. Rendu et comportement du scroll au doigt non
+    vérifiés visuellement de mon côté (pas d'automatisation navigateur
+    disponible cette session) — à confirmer par Sam sur son téléphone.
