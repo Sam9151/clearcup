@@ -9,9 +9,9 @@
 
 <!-- PWA — manifeste et icônes propres au jeu (pas ceux du site principal,
      voir lp-manifest.json : name/start_url/scope différents, mêmes icônes
-     ASSET_CC réutilisées telles quelles). -->
+     assets réutilisées telles quelles). -->
 <link rel="manifest" href="lp-manifest.json">
-<link rel="apple-touch-icon" href="ASSET_CC/favicon-180.png">
+<link rel="apple-touch-icon" href="assets/favicon-180.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Lâche pas">
@@ -85,14 +85,14 @@
   /* Polices auto-hébergées, sous-coupées pour le jeu (voir ASSETS_A_FOURNIR.md) */
   @font-face{
     font-family:'Bagel Fat One';
-    src:url('TYPO/lp-bagel-fat-one.woff2') format('woff2');
+    src:url('fonts/lp-bagel-fat-one.woff2') format('woff2');
     font-weight:400;
     font-style:normal;
     font-display:swap; /* était block : le chrono (#timer) l'utilise, un réseau lent (bar/festival) le laissait invisible pendant le chargement au lieu d'afficher un fallback */
   }
   @font-face{
     font-family:'Arimo';
-    src:url('TYPO/lp-arimo.woff2') format('woff2');
+    src:url('fonts/lp-arimo.woff2') format('woff2');
     font-weight:100 900;
     font-style:normal;
     font-display:swap;

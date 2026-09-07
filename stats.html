@@ -47,12 +47,12 @@
   }
   @font-face{
     font-family:'Bagel Fat One';
-    src:url('TYPO/lp-bagel-fat-one.woff2') format('woff2');
+    src:url('fonts/lp-bagel-fat-one.woff2') format('woff2');
     font-weight:400; font-style:normal; font-display:swap;
   }
   @font-face{
     font-family:'Arimo';
-    src:url('TYPO/lp-arimo.woff2') format('woff2');
+    src:url('fonts/lp-arimo.woff2') format('woff2');
     font-weight:100 900; font-style:normal; font-display:swap;
   }
   html,body{ margin:0; padding:0; }
@@ -477,6 +477,15 @@ var CAUSE_LABELS = {
 
 function fmtSec(ms){ return (ms / 1000).toFixed(1).replace('.', ',') + ' s'; }
 
+// Échappement HTML — toute donnée provenant de /runs (handle, distractionId…)
+// est écrite côté client sans authentification (règles Firebase : create
+// public), donc jamais fiable telle quelle avant une insertion via innerHTML.
+function escapeHtml(str){
+  return String(str).replace(/[&<>"']/g, function(c){
+    return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c];
+  });
+}
+
 function median(sortedNums){
   var n = sortedNums.length;
   if (!n) return 0;
@@ -485,7 +494,8 @@ function median(sortedNums){
 }
 
 function prettyDistractionId(id){
-  return id.replace(/_/g, ' ').replace(/^./, function(c){ return c.toUpperCase(); });
+  var pretty = id.replace(/_/g, ' ').replace(/^./, function(c){ return c.toUpperCase(); });
+  return escapeHtml(pretty);
 }
 
 function renderBars(container, entries, total){
@@ -581,7 +591,7 @@ function openClassement(){
     $('classement-list').innerHTML = '<li class="empty-note" style="border:none;">Aucune partie enregistrée pour ce classement.</li>';
   } else {
     $('classement-list').innerHTML = list.map(function(r, i){
-      var name = r.handle ? ('@' + r.handle) : 'Joueur anonyme';
+      var name = r.handle ? ('@' + escapeHtml(r.handle)) : 'Joueur anonyme';
       return '<li><span class="rank">' + (i + 1) + '</span>' +
         '<span class="rank-handle">' + name + '</span>' +
         '<span class="rank-time">' + fmtSec(r.scoreMs || 0) + '</span></li>';

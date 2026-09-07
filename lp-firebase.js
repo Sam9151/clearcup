@@ -26,10 +26,14 @@
 //       "$runId": {
 //         ".write": "!data.exists()",
 //         ".validate": "newData.hasChildren(['scoreMs','cause','clientId','gameVersion','createdAt'])",
-//         "handle": { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 30)" },
+//         "handle": { ".validate": "newData.val() == null || (newData.isString() && newData.val().length <= 30 && newData.val().matches(/^[a-zA-Z0-9._]{1,30}$/))" },
 //         "scoreMs": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 45000" },
 //         "cause": { ".validate": "newData.isString() && newData.val().matches(/^(deux_doigts|jauge|action_ratee|leurre|cap)$/)" },
-//         "distractionId": { ".validate": "newData.val() == null || newData.isString()" },
+//         // Liste fermée des distractionId définies dans DISTRACTIONS (game.html) — un
+//         // champ libre ici permettrait d'écrire du HTML/JS affiché sans échappement
+//         // dans stats.html (faille XSS corrigée le 07.09.2026, voir escapeHtml() côté
+//         // affichage — cette règle ferme aussi le trou côté écriture).
+//         "distractionId": { ".validate": "newData.val() == null || (newData.isString() && newData.val().matches(/^(pote_appelle|commande_prete|photo_groupe|drop_arrive|uber_arrive|story_poster|notif_batterie|pub_flash|tag_ig|mail_pro|meteo_orage|maj_app|bousculade|basses|derive|rotation)$/))" },
 //         "percentileShown": { ".validate": "newData.val() == null || (newData.isNumber() && newData.val() >= 0 && newData.val() <= 100)" },
 //         "clientId": { ".validate": "newData.isString() && newData.val().length <= 64" },
 //         "gameVersion": { ".validate": "newData.isString() && newData.val().length <= 16" },

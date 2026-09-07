@@ -412,3 +412,18 @@ compte) n'a pas pu être testé de bout en bout ici**, faute d'identifiants —
 en tête de `lp-firebase.js`, qui reste la source de vérité) — remplace les
 règles actuelles dans la console Firebase par la version complète incluant
 `festivals` et `activeFestivalId`.
+
+- **07.09.2026** — Deux failles XSS stockée corrigées dans `stats.html`
+  (`handle` et `distractionId` affichés sans échappement, écrivables sans
+  authentification via l'API Firebase directe — voir la revue de sécurité).
+  Ajout de `escapeHtml()` côté affichage + durcissement des règles Firebase
+  documentées dans `lp-firebase.js` (regex stricte sur `handle`, liste
+  fermée sur `distractionId`). **À reporter dans la console Firebase.**
+  Nettoyage de dossier à la racine du repo (rangement demandé par Sam,
+  URLs des pages publiques inchangées) : `ASSET_CC/` → `assets/`,
+  `TYPO/` → `fonts/`, `Assets_game/` → `assets-game/`. Toutes les
+  occurrences ci-dessus dans ce changelog (avant le 07.09.2026) utilisent
+  encore les anciens noms — c'est normal, elles décrivent l'état du repo
+  à la date où elles ont été écrites. Ce fichier lui-même déplacé de la
+  racine vers `docs/game/README-game.md` (toujours untracked, inchangé
+  côté contenu sinon).

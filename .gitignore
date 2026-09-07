@@ -2,3 +2,10 @@
 *.env
 .env
 node_modules/
+
+# Notes de travail internes — ne doivent jamais être poussées sur GitHub
+# (voir leur propre en-tête). Ajouté le 07.09.2026 après avoir constaté que
+# README-game.md et Assets_game/ avaient fini committés par erreur malgré
+# la même intention affichée.
+/mail/
+/docs/game/ASSETS_A_FOURNIR.md

@@ -19,10 +19,10 @@ var GAME_FILES = [
   '/lp-firebase-config.js',
   '/lp-firebase.js',
   '/lp-percentiles.json',
-  '/TYPO/lp-bagel-fat-one.woff2',
-  '/TYPO/lp-arimo.woff2',
-  '/ASSET_CC/icon-192.png',
-  '/ASSET_CC/icon-512.png'
+  '/fonts/lp-bagel-fat-one.woff2',
+  '/fonts/lp-arimo.woff2',
+  '/assets/icon-192.png',
+  '/assets/icon-512.png'
 ];
 
 self.addEventListener('install', function(event){

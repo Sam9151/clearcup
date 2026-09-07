@@ -27,18 +27,31 @@
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "/ASSET_CC/*"
+  for = "/assets/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[headers]]
-  for = "/TYPO/*"
+  for = "/fonts/*"
   [headers.values]
     Cache-Control = "public, max-age=31536000, immutable"
 
 [[redirects]]
   from = "/index.html"
   to = "/"
+  status = 301
+
+# Rangement du 07.09.2026 : ASSET_CC/ -> assets/, TYPO/ -> fonts/. Redirections
+# gardées pour les liens déjà partagés (og:image en cache Facebook/Twitter,
+# manifestes PWA déjà installés) et l'indexation Google Images existante.
+[[redirects]]
+  from = "/ASSET_CC/*"
+  to = "/assets/:splat"
+  status = 301
+
+[[redirects]]
+  from = "/TYPO/*"
+  to = "/fonts/:splat"
   status = 301
 
 [[redirects]]

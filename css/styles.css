@@ -3,7 +3,7 @@
 /* ── Polices self-hosted ── */
 @font-face {
   font-family: 'Bagel Fat One';
-  src: url('../TYPO/BagelFatOne-Regular.woff2') format('woff2');
+  src: url('../fonts/BagelFatOne-Regular.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: block;
@@ -11,7 +11,7 @@
 
 @font-face {
   font-family: 'Arimo';
-  src: url('../TYPO/Arimo-VariableFont_wght.woff2') format('woff2');
+  src: url('../fonts/Arimo-VariableFont_wght.woff2') format('woff2');
   font-weight: 100 900;
   font-style: normal;
   font-display: swap;
@@ -19,7 +19,7 @@
 
 @font-face {
   font-family: 'Arimo';
-  src: url('../TYPO/Arimo-Italic-VariableFont_wght.woff2') format('woff2');
+  src: url('../fonts/Arimo-Italic-VariableFont_wght.woff2') format('woff2');
   font-weight: 100 900;
   font-style: italic;
   font-display: swap;
