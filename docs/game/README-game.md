@@ -549,3 +549,33 @@ règles actuelles dans la console Firebase par la version complète incluant
     `stats.html`) validée, tous les ID HTML référencés en JS existent,
     aucun résidu des éléments supprimés, chargement HTTP 200 sur les 3
     pages via serveur local.
+
+- **07.09.2026** — Trois derniers retours de tests joueurs, même session :
+  - **Action "photo" impossible à réussir en fin de partie** : la carte
+    `photo_groupe` demandait un maintien de `holdMs:1000`, alors que
+    `gaugeFillMs` (vitesse de remplissage de la jauge de risque hors
+    maintien) descend à `500` en phase "impossible" (30-45s). Or `loop()`
+    vérifie `game.risk >= 1` (défaite) AVANT de vérifier si le maintien est
+    terminé — l'action ne pouvait donc plus jamais aboutir passé un certain
+    stade, quelle que soit l'habileté du joueur. Corrigé : `holdMs:400`,
+    largement sous le pire des `gaugeFillMs`.
+  - **"18 000 secondes" pris pour un bug d'affichage du score** : ce n'est
+    pas un bug de calcul (`fmtPercentFr()` compare bien le score, 45s max,
+    à une "soirée" fictive de 5h = 18 000 000 ms — le % obtenu est
+    volontairement tout petit, effet recherché). Le vrai problème : le
+    texte "Une soirée dure environ 5 heures." et "18 000 secondes."
+    apparaissaient comme deux phrases indépendantes, avant que le % arrive
+    plus loin — lu comme un score erroné plutôt que comme une conversion.
+    Texte relié explicitement : "...5 heures, soit 18 000 secondes." puis
+    "Toi, tu as surveillé ton verre pendant X % de ces 18 000 secondes."
+  - **Affichage bizarre sur iPhone (barre d'URL Safari)** : `height:100%`
+    seul ne suit pas la barre d'URL qui apparaît/disparaît en cours de
+    partie. Ajout de `height:100dvh` (amélioration progressive, le
+    `height:100%` reste en repli pour les navigateurs qui ne connaissent
+    pas `dvh`) sur `html,body` et `#app`. Jeu déjà strictement portrait
+    (invite à tourner l'écran en paysage, voir `#screen-rotate`) — aucun
+    lien avec cette correction.
+  - Vérifié : syntaxe JS de `game.html` validée, chargement HTTP 200 via
+    serveur local. Correction visuelle iPhone non vérifiée visuellement de
+    mon côté (pas d'automatisation navigateur disponible cette session) —
+    à confirmer par Sam sur son téléphone.

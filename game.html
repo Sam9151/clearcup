@@ -112,7 +112,12 @@
   }
   html, body{
     margin:0;
-    height:100%;
+    height:100%; /* repli navigateurs sans dvh */
+    height:100dvh; /* hauteur de viewport dynamique — suit la barre d'URL Safari
+                      iOS qui apparaît/disparaît, au lieu de rester calée sur
+                      la hauteur figée au chargement (bug remonté le
+                      07.09.2026 sur iPhone). Ignoré silencieusement par les
+                      navigateurs qui ne connaissent pas "dvh". */
     overscroll-behavior:none;
     background:var(--white);
     color:var(--ink);
@@ -136,7 +141,7 @@
   /* ==========================================================================
      STRUCTURE GÉNÉRALE
      ========================================================================== */
-  #app{ position:relative; width:100%; height:100%; }
+  #app{ position:relative; width:100%; height:100%; height:100dvh; }
   /* Fondu entre écrans : chaque écran reste dans le rendu (jamais display:none,
      display:none ne peut pas être transitionné) mais à opacité 0 et
      pointer-events:none tant qu'il n'est pas actif. showScreen() bascule la
@@ -1245,7 +1250,7 @@
     </div>
 
     <div class="rv-temps rv-temps--blue" id="rv-temps-4">
-      <p class="rv-retournement-intro">Une soirée dure environ 5 heures.</p>
+      <p class="rv-retournement-intro">Une soirée dure environ 5 heures, soit</p>
       <p class="rv-18000">18 000 secondes.</p>
       <div class="nb-card rv-card">
         <div class="rv-bars" aria-hidden="true">
@@ -1626,7 +1631,15 @@
     // ---- Type A — actions obligatoires (taper/tenir/glisser, sinon action_ratee) ----
     { id:'pote_appelle',   type:'A', phaseMin:'confiance', fenetreMs:2000, poids:3 }, // rendu spécial, voir buildCallBanner()
     { id:'commande_prete', type:'A', phaseMin:'confiance', fenetreMs:1800, poids:3, icon:'🧾', accent:'#F59E0B' },
-    { id:'photo_groupe',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'📸', accent:'var(--blue)', interaction:'hold', holdMs:1000 },
+    // holdMs doit rester strictement sous le plus petit gaugeFillMs des phases
+    // où cette carte peut apparaître (elle se débloque en 'montee' et reste
+    // ensuite éligible en 'chaos'/'impossible', voir phaseUnlocked()) — sinon
+    // la jauge de risque (qui monte tant que le doigt n'est pas sur le verre,
+    // donc pendant tout le hold) atteint son maximum AVANT la fin du hold, et
+    // l'action devient littéralement impossible à réussir. Bug trouvé le
+    // 07.09.2026 : holdMs valait 1000 alors que gaugeFillMs descend à 500 en
+    // phase 'impossible' — corrigé à 400 (marge de sécurité sous le pire cas).
+    { id:'photo_groupe',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'📸', accent:'var(--blue)', interaction:'hold', holdMs:400 },
     { id:'drop_arrive',    type:'A', phaseMin:'montee',    fenetreMs:1500, poids:2, icon:'🙌', accent:'var(--blue)', interaction:'doubletap' },
     { id:'navette_repart', type:'A', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'🚌', accent:'var(--ink)' },
     { id:'groupe_piste',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'💃', accent:'var(--blue)', interaction:'slide' },
@@ -3037,7 +3050,13 @@
       var pct = fmtPercentFr(revelationScoreMs);
       var barWidthPct = Math.max(0, Math.min(100, revelationScoreMs / 18000000 * 100));
       $('rv-bar-toi').style.width = barWidthPct + '%';
-      $('rv-percent').textContent = 'Tu as surveillé ton verre ' + pct + ' % de ta soirée.';
+      // Reformulé le 07.09.2026 : "de ta soirée" tout seul, après le bloc
+      // barres, se relisait comme déconnecté du "18 000 secondes" plus haut —
+      // des joueurs pensaient que "18000" était un bug d'affichage de LEUR
+      // score plutôt que le repère (5h = 18 000s) auquel le pourcentage se
+      // compare. Référence explicite à "ces 18 000 secondes" pour reconnecter
+      // les deux sans toucher à la mise en page (voir .rv-18000/.rv-percent).
+      $('rv-percent').textContent = 'Toi, tu as surveillé ton verre pendant ' + pct + ' % de ces 18 000 secondes.';
       $('rv-temps-4').classList.add('is-visible');
       revelationStep = 3; // écran final : plus d'avance au tap, seul « Rejouer » agit
     }
