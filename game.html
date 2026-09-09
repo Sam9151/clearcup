@@ -1626,7 +1626,7 @@
       },
       notif_batterie: {
         texte: 'Batterie faible — 12 %', sousTitre: 'Économie d’énergie ?', label: 'Activer',
-        rate: 'Juste une alerte batterie. T’as lâché ton verre pour vérifier.'
+        rate: 'Le temps d’activer l’économie d’énergie, t’as lâché ton verre.'
       },
       pub_flash: {
         texte: '-50 % aujourd’hui seulement', sousTitre: 'Offre flash', label: 'Profiter',
@@ -1708,13 +1708,22 @@
     // l'action devient littéralement impossible à réussir. Bug trouvé le
     // 07.09.2026 : holdMs valait 1000 alors que gaugeFillMs descend à 500 en
     // phase 'impossible' — corrigé à 400 (marge de sécurité sous le pire cas).
-    { id:'photo_groupe',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'📸', accent:'var(--blue)', interaction:'hold', holdMs:400 },
+    // photo_groupe est passée en tap simple (pas de champ interaction) le
+    // 09.09.2026 à la demande de Sam : le hold était trop long par rapport au
+    // temps de remplissage de la jauge de risque (voir l'historique du bug
+    // holdMs ci-dessus, avant que la distraction ne repasse en tap simple).
+    { id:'photo_groupe',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'📸', accent:'var(--blue)' },
     { id:'drop_arrive',    type:'A', phaseMin:'montee',    fenetreMs:1500, poids:2, icon:'🙌', accent:'var(--blue)', interaction:'doubletap' },
     { id:'navette_repart', type:'A', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'🚌', accent:'var(--ink)' },
     { id:'groupe_piste',   type:'A', phaseMin:'montee',    fenetreMs:2500, poids:2, icon:'💃', accent:'var(--blue)', interaction:'slide' },
+    // notif_batterie est passée de leurre (type B) à action obligatoire
+    // (type A) le 09.09.2026 à la demande de Sam : c'est maintenant une
+    // action que le joueur doit faire (tap simple), plus un piège à éviter —
+    // voir COPY.distractions.notif_batterie.rate, réécrit en conséquence
+    // (action_ratee, plus leurre).
+    { id:'notif_batterie', type:'A', phaseMin:'confiance', fenetreMs:2200, poids:2, icon:'🔋', accent:'#F59E0B' },
 
     // ---- Type B — leurres (NE PAS taper, sinon perdu) : même grammaire visuelle que le type A ----
-    { id:'notif_batterie', type:'B', phaseMin:'confiance', fenetreMs:2200, poids:2, icon:'🔋', accent:'#F59E0B' },
     { id:'pub_flash',      type:'B', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'🏷️', accent:'#F59E0B' },
     { id:'colis_livre',    type:'B', phaseMin:'confiance', fenetreMs:2000, poids:2, icon:'📦', accent:'var(--blue)' },
     { id:'mail_pro',       type:'B', phaseMin:'montee',    fenetreMs:2000, poids:2, icon:'✉️', accent:'var(--ink)' },
