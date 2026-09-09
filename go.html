@@ -64,6 +64,7 @@
     --border:2px solid var(--ink);
     --radius:16px;
     --shadow:4px 4px 0 var(--ink);
+    --shadow-sm:2px 2px 0 var(--ink); /* même valeur que --shadow-dark-sm du site principal (css/styles.css) */
     --font-title:'Bagel Fat One', system-ui, -apple-system, sans-serif;
     --font-body:'Arimo', system-ui, -apple-system, sans-serif;
   }
@@ -141,7 +142,15 @@
     box-shadow:var(--shadow);
     transition:transform 120ms ease, box-shadow 120ms ease;
   }
-  .link-btn:active{ transform:translate(3px,3px); box-shadow:none; }
+  /* Même effet que .btn-primary/.card sur le site principal (css/styles.css) :
+     translate(2px,2px) + ombre réduite. Au survol pour la souris (desktop),
+     au clic pour le tactile (@media (hover:none) — un écran tactile n'a pas
+     de vrai survol) : demande explicite de Sam, "mêmes effets qu'ailleurs
+     sur le site pour la version desktop". */
+  .link-btn:hover{ transform:translate(2px,2px); box-shadow:var(--shadow-sm); }
+  @media (hover:none){
+    .link-btn:active{ transform:translate(2px,2px); box-shadow:var(--shadow-sm); }
+  }
   .empty-note{
     text-align:center;
     font-size:.9rem;
@@ -161,7 +170,10 @@
     box-shadow:3px 3px 0 var(--ink);
     transition:transform 120ms ease, box-shadow 120ms ease;
   }
-  .insta-btn:active{ transform:translate(2px,2px); box-shadow:none; }
+  .insta-btn:hover{ transform:translate(2px,2px); box-shadow:var(--shadow-sm); }
+  @media (hover:none){
+    .insta-btn:active{ transform:translate(2px,2px); box-shadow:var(--shadow-sm); }
+  }
 </style>
 </head>
 <body>
