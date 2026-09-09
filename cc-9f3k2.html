@@ -49,6 +49,10 @@
         "url": { ".validate": "newData.isString() && newData.val().length <= 500 && (newData.val().beginsWith('https://') || newData.val().beginsWith('mailto:') || newData.val().beginsWith('tel:'))" },
         "order": { ".validate": "newData.isNumber()" },
         "createdAt": { ".validate": "newData.val() == now" },
+        "clicks": {
+          ".write": true,
+          ".validate": "newData.isNumber() && newData.val() >= 0 && (!data.exists() || newData.val() == data.val() + 1)"
+        },
         "$other": { ".validate": false }
       }
     }
@@ -62,12 +66,23 @@
   (choix explicite de Sam) : un lien d'un autre type est refusé par
   Firebase, pas seulement par ce formulaire.
 
+  "clicks" (ajouté le 09.09.2026, compteur de clics affiché ci-dessous) est
+  la SEULE exception au "auth != null" général : ".write": true à ce niveau
+  précis, pour que n'importe quel visiteur de go.html (donc non connecté)
+  puisse l'incrémenter. Protégé quand même par ".validate" — un visiteur ne
+  peut écrire que le nombre exact "précédent + 1" (jamais une valeur
+  arbitraire ou négative), pattern standard Firebase pour un compteur
+  public. Voir bumpClicks() dans go.html (runTransaction, jamais un simple
+  get+set, pour rester correct même si plusieurs personnes cliquent au même
+  moment).
+
   Renommer/modifier un lien passe par update() sur "label"/"url"
-  uniquement (jamais "createdAt", donc jamais revalidé — même logique que
-  le renommage de festival dans stats.html). Réordonner passe par un
-  update() multi-chemins sur "order" uniquement, entre les deux liens
-  échangés (voir moveLink()) — jamais de renumérotation complète de la
-  liste, donc jamais de risque de casser un autre lien pendant l'opération.
+  uniquement (jamais "createdAt"/"clicks", donc jamais revalidés — même
+  logique que le renommage de festival dans stats.html). Réordonner passe
+  par un update() multi-chemins sur "order" uniquement, entre les deux
+  liens échangés (voir moveLink()) — jamais de renumérotation complète de
+  la liste, donc jamais de risque de casser un autre lien pendant
+  l'opération.
 
   Même projet Firebase que le jeu (lp-firebase-config.js) — décision
   explicite de Sam. Ton compte admin existant (celui de stats.html)
@@ -186,6 +201,13 @@
     font-size:.8rem;
     color:rgba(10,10,10,.55);
     white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .link-row-clicks{
+    display:block;
+    font-size:.75rem;
+    font-weight:700;
+    color:var(--blue);
+    margin-top:.15rem;
   }
   .link-row-actions{ display:flex; gap:.35rem; align-items:center; flex-shrink:0; }
 
@@ -419,6 +441,7 @@ function renderLinks(){
       '<div class="link-row-text">' +
         '<div class="link-row-label">' + escapeHtml(l.label) + '</div>' +
         '<span class="link-row-url">' + escapeHtml(l.url) + '</span>' +
+        '<span class="link-row-clicks">' + (l.clicks || 0) + ' clic' + ((l.clicks || 0) === 1 ? '' : 's') + '</span>' +
       '</div>' +
       '<div class="link-row-actions">' +
         (i > 0 ? '<button type="button" class="btn btn--white btn--sm btn--icon" data-up="' + l.id + '" aria-label="Monter">↑</button>' : '') +

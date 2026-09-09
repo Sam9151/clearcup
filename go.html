@@ -65,6 +65,8 @@
     --radius:16px;
     --shadow:4px 4px 0 var(--ink);
     --shadow-sm:2px 2px 0 var(--ink); /* même valeur que --shadow-dark-sm du site principal (css/styles.css) */
+    --blue-alt:#79B2F8; /* variante proche de --blue, pour le dégradé animé du fond (subtil, pas un vrai changement de couleur) */
+    --ease-out:cubic-bezier(0.22, 1, 0.36, 1); /* même valeur que game.html */
     --font-title:'Bagel Fat One', system-ui, -apple-system, sans-serif;
     --font-body:'Arimo', system-ui, -apple-system, sans-serif;
   }
@@ -87,10 +89,21 @@
     font-family:var(--font-body);
     color:var(--ink);
     /* Bleu de marque exact (#64A4F6, vérifié dans css/styles.css --blue et
-       index.html), demande explicite de Sam le 09.09.2026 — avant : fond
-       blanc. */
-    background:var(--blue);
+       index.html), demande explicite de Sam le 07.09.2026. Dégradé animé
+       très subtil ajouté le 09.09.2026 (même principe que
+       .animated-gradient dans game.html) — reste perçu comme "bleu plat"
+       mais donne un peu de vie à la page. */
+    background:linear-gradient(257deg, var(--blue) 0%, var(--blue-alt) 100%);
+    background-size:150% 150%;
+    animation:gradient-wave 10s ease-in-out infinite alternate;
     min-height:100vh;
+  }
+  @keyframes gradient-wave{
+    0%{ background-position:0% 50%; }
+    100%{ background-position:100% 50%; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    body{ animation:none; background-position:50% 50%; }
   }
   .wrap{
     max-width:420px;
@@ -125,6 +138,7 @@
     gap:.9rem;
   }
   .link-btn{
+    position:relative; /* ancre .badge-new */
     display:block;
     width:100%;
     font-family:var(--font-title);
@@ -142,6 +156,35 @@
     box-shadow:var(--shadow);
     transition:transform 120ms ease, box-shadow 120ms ease;
   }
+  /* Indique que le lien ouvre un nouvel onglet — détail de finition courant
+     sur les pages "liens en bio" (Linktree, Bento…). Discrète (opacité
+     réduite, taille moindre), pas ajoutée au texte lui-même (aria-label
+     inutile : target="_blank" suffit à décrire le comportement pour un
+     lecteur d'écran, cette flèche est purement visuelle). */
+  .link-btn::after{
+    content:'↗';
+    display:inline-block;
+    margin-left:.4em;
+    font-size:.85em;
+    opacity:.5;
+    vertical-align:0;
+  }
+  /* Badge "Nouveau" — posé en JS (voir isRecent()) sur les liens créés il y
+     a moins de 7 jours, disparaît tout seul ensuite sans action de Sam. */
+  .badge-new{
+    position:absolute;
+    top:-.6rem;
+    right:1rem;
+    font-family:var(--font-body);
+    font-size:.65rem;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--white);
+    background:var(--ink);
+    border-radius:999px;
+    padding:.2rem .55rem;
+  }
   /* Même effet que .btn-primary/.card sur le site principal (css/styles.css) :
      translate(2px,2px) + ombre réduite. Au survol pour la souris (desktop),
      au clic pour le tactile (@media (hover:none) — un écran tactile n'a pas
@@ -155,6 +198,14 @@
     text-align:center;
     font-size:.9rem;
     color:rgba(255,255,255,.8); /* texte clair sur fond bleu, était sombre sur fond blanc */
+  }
+  /* Apparition en cascade — logo, description puis chaque lien (voir JS,
+     qui pose un animation-delay croissant par élément). Même recette que
+     .accueil-brand.entree/.accueil-title.entree dans game.html. */
+  .entree{ opacity:0; animation:fade-up 480ms var(--ease-out) both; }
+  @keyframes fade-up{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:translateY(0); } }
+  @media (prefers-reduced-motion: reduce){
+    .entree{ opacity:1; animation:none; }
   }
   .insta-btn{
     display:flex;
@@ -174,14 +225,58 @@
   @media (hover:none){
     .insta-btn:active{ transform:translate(2px,2px); box-shadow:var(--shadow-sm); }
   }
+
+  .site-footer-link{
+    display:inline-block;
+    margin-top:2.5rem;
+    font-family:var(--font-body);
+    font-size:.85rem;
+    color:rgba(255,255,255,.75);
+    text-decoration:none;
+  }
+  .site-footer-link:hover{ text-decoration:underline; }
+
+  /* ---- Curseur personnalisé (desktop) — même recette que css/styles.css
+     (index.html), reprise ici pour la cohérence sur ordinateur. Inactif sur
+     tactile (media query + JS, voir plus bas) où un curseur personnalisé
+     n'a pas de sens. ---- */
+  @media (hover:hover) and (pointer:fine){
+    body{ cursor:none; }
+    a, button{ cursor:none; }
+
+    .cursor-dot{
+      position:fixed; width:8px; height:8px;
+      background:var(--ink); border-radius:50%;
+      pointer-events:none; z-index:9999;
+      transform:translate(-50%,-50%);
+      transition:width 200ms ease, height 200ms ease, background 200ms ease, opacity 200ms ease;
+      will-change:transform;
+    }
+    .cursor-ring{
+      position:fixed; width:38px; height:38px;
+      border:2px solid var(--ink); border-radius:50%;
+      pointer-events:none; z-index:9998;
+      transform:translate(-50%,-50%);
+      transition:width 250ms ease, height 250ms ease, background 250ms ease, border-color 250ms ease, opacity 200ms ease;
+      will-change:transform;
+    }
+    /* Pas de changement de couleur au survol ici (contrairement au site
+       principal) : cette page alterne fond bleu et boutons blancs, un
+       curseur qui passerait au blanc ou au bleu deviendrait invisible sur
+       l'un des deux selon l'élément survolé. Seule la taille change — le
+       noir reste lisible partout. */
+    body.cursor-hover .cursor-dot{ width:4px; height:4px; }
+    body.cursor-hover .cursor-ring{ width:52px; height:52px; background:rgba(10,10,10,.12); }
+    body.cursor-hidden .cursor-dot, body.cursor-hidden .cursor-ring{ opacity:0; }
+  }
 </style>
 </head>
 <body>
 
 <div class="wrap">
-  <img class="logo" src="assets-game/LOGO_CC_MAIN.svg" alt="ClearCup" width="200" height="70">
+  <img class="logo entree" id="logo" src="assets-game/LOGO_CC_MAIN.svg" alt="ClearCup" width="200" height="70" style="animation-delay:0ms">
 
-  <p class="tagline">Sticker anti-soumission chimique pour vos verres — simple, discret, efficace.</p>
+  <p class="tagline entree" id="tagline" style="animation-delay:80ms">Sticker anti-soumission chimique pour vos verres — simple, discret, efficace.</p>
 
   <div class="links-list" id="links-list">
     <p class="empty-note">Chargement…</p>
@@ -189,21 +284,36 @@
 
   <!-- Séparé de la liste dynamique — voir commentaire d'en-tête. Même
        recette (icône + lien) que le reste du site, ex. index.html. -->
-  <a class="insta-btn" href="https://instagram.com/clearcup.ch" target="_blank" rel="noopener noreferrer me" aria-label="Instagram @clearcup.ch">
+  <a class="insta-btn" id="insta-btn" href="https://instagram.com/clearcup.ch" target="_blank" rel="noopener noreferrer me" aria-label="Instagram @clearcup.ch">
     <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <rect x="2" y="2" width="20" height="20" rx="5" ry="5"/>
       <circle cx="12" cy="12" r="4"/>
       <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
     </svg>
   </a>
+
+  <a class="site-footer-link" id="site-footer-link" href="https://clearcup.ch">Voir le site → clearcup.ch</a>
 </div>
+
+<!-- Curseur personnalisé desktop — voir @media (hover:hover) plus haut et le
+     script plus bas. Vides, positionnés par JS (suivi de la souris). -->
+<div class="cursor-dot"></div>
+<div class="cursor-ring"></div>
 
 <script src="lp-firebase-config.js"></script>
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js';
-import { getDatabase, ref, onValue } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
+import { getDatabase, ref, onValue, runTransaction } from 'https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js';
 
 function $(id){ return document.getElementById(id); }
+
+// Vibration légère au tap — même réflexe défensif que vibrate() dans
+// game.html (try/catch + détection de fonctionnalité : l'API est absente
+// sur desktop et sur certains navigateurs, ne doit jamais faire planter le
+// clic sur un lien).
+function vibrate(ms){
+  try { if (navigator.vibrate) navigator.vibrate(ms); } catch(e){}
+}
 
 // Échappement HTML — "goLinks" est modifiable uniquement par un admin
 // authentifié (voir cc-9f3k2.html/règles Firebase), mais on applique quand
@@ -217,16 +327,66 @@ function escapeHtml(str){
   });
 }
 
-function renderLinks(links){
+// Badge "Nouveau" — 7 jours depuis createdAt (timestamp serveur, ms), puis
+// disparaît tout seul sans que Sam ait à y penser.
+var NEW_BADGE_MS = 7 * 24 * 60 * 60 * 1000;
+function isRecent(createdAt){
+  return typeof createdAt === 'number' && (Date.now() - createdAt) < NEW_BADGE_MS;
+}
+
+// Compteur de clics — transaction (pas un simple get+set) pour rester
+// correct même si plusieurs personnes cliquent au même moment. Ne bloque
+// jamais l'ouverture du lien (pas de preventDefault : le clic ouvre le lien
+// dans un nouvel onglet pendant que cette écriture se termine en tâche de
+// fond sur l'onglet courant). Champ "clicks" public en écriture côté règles
+// Firebase (voir cc-9f3k2.html), contrairement au reste du lien
+// (label/url/order/createdAt, réservés à l'admin).
+function bumpClicks(db, linkId){
+  runTransaction(ref(db, 'goLinks/' + linkId + '/clicks'), function(current){
+    return (current || 0) + 1;
+  }).catch(function(err){ console.warn('[go] compteur de clics :', err && err.message); });
+}
+
+// Apparition en cascade — un seul passage, à l'affichage initial des liens.
+// Les mises à jour temps réel suivantes (admin qui modifie un lien pendant
+// qu'un visiteur a la page ouverte) se contentent de redessiner sans
+// rejouer l'animation, pour ne pas faire clignoter toute la liste à chaque
+// changement.
+var firstLinksRender = true;
+
+function renderLinks(links, db){
   if (!links.length){
     $('links-list').innerHTML = '<p class="empty-note">Aucun lien pour l’instant.</p>';
     return;
   }
   $('links-list').innerHTML = links.map(function(l){
-    return '<a class="link-btn" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener noreferrer">' +
-      escapeHtml(l.label) + '</a>';
+    var badge = isRecent(l.createdAt) ? '<span class="badge-new">Nouveau</span>' : '';
+    return '<a class="link-btn" data-id="' + l.id + '" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener noreferrer">' +
+      badge + escapeHtml(l.label) + '</a>';
   }).join('');
+
+  $('links-list').querySelectorAll('.link-btn').forEach(function(el, i){
+    el.addEventListener('click', function(){
+      vibrate(10);
+      bumpClicks(db, el.getAttribute('data-id'));
+    });
+    if (firstLinksRender){
+      el.classList.add('entree');
+      el.style.animationDelay = (160 + i * 70) + 'ms';
+    }
+  });
+
+  if (firstLinksRender){
+    var tailDelay = 160 + links.length * 70;
+    $('insta-btn').classList.add('entree');
+    $('insta-btn').style.animationDelay = (tailDelay + 70) + 'ms';
+    $('site-footer-link').classList.add('entree');
+    $('site-footer-link').style.animationDelay = (tailDelay + 140) + 'ms';
+    firstLinksRender = false;
+  }
 }
+
+$('insta-btn').addEventListener('click', function(){ vibrate(10); });
 
 if (!window.LP_FIREBASE_CONFIG){
   $('links-list').innerHTML = '<p class="empty-note">Configuration Firebase introuvable.</p>';
@@ -244,12 +404,49 @@ if (!window.LP_FIREBASE_CONFIG){
       l.id = id;
       return l;
     }).sort(function(a, b){ return (a.order || 0) - (b.order || 0); });
-    renderLinks(links);
+    renderLinks(links, db);
   }, function(err){
     console.warn('[go] lecture des liens impossible :', err && err.message);
     $('links-list').innerHTML = '<p class="empty-note">Liens temporairement indisponibles.</p>';
   });
 }
+
+// ---- Curseur personnalisé (desktop) — voir @media (hover:hover) plus haut.
+// Délégation d'événements (mouseover/mouseout + closest()) plutôt que le
+// forEach+querySelectorAll du site principal : les liens sont ajoutés
+// dynamiquement par Firebase, une liaison figée au chargement les
+// manquerait. ----
+(function(){
+  var cursorDot = document.querySelector('.cursor-dot');
+  var cursorRing = document.querySelector('.cursor-ring');
+  if (!cursorDot || !cursorRing || !window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+
+  var mouseX = 0, mouseY = 0, ringX = 0, ringY = 0;
+
+  document.addEventListener('mousemove', function(e){
+    mouseX = e.clientX; mouseY = e.clientY;
+    cursorDot.style.left = mouseX + 'px';
+    cursorDot.style.top = mouseY + 'px';
+    document.body.classList.remove('cursor-hidden');
+  });
+  document.addEventListener('mouseleave', function(){ document.body.classList.add('cursor-hidden'); });
+  document.addEventListener('mouseenter', function(){ document.body.classList.remove('cursor-hidden'); });
+
+  (function animateRing(){
+    ringX += (mouseX - ringX) * 0.12;
+    ringY += (mouseY - ringY) * 0.12;
+    cursorRing.style.left = ringX + 'px';
+    cursorRing.style.top = ringY + 'px';
+    requestAnimationFrame(animateRing);
+  })();
+
+  document.addEventListener('mouseover', function(e){
+    if (e.target.closest && e.target.closest('a, button')) document.body.classList.add('cursor-hover');
+  });
+  document.addEventListener('mouseout', function(e){
+    if (e.target.closest && e.target.closest('a, button')) document.body.classList.remove('cursor-hover');
+  });
+})();
 </script>
 </body>
 </html>
