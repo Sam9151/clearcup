@@ -118,7 +118,7 @@
      ressortent en blanc plein — même rendu que le logo sur fond bleu de la
      révélation dans game.html (#rv-temps-4), pas un problème. */
   .logo{
-    width:clamp(140px, 42vw, 200px);
+    width:clamp(190px, 54vw, 280px); /* agrandi une 2e fois, demande explicite de Sam le 09.09.2026 */
     height:auto;
     display:block;
     margin-bottom:1.25rem;
@@ -138,7 +138,6 @@
     gap:.9rem;
   }
   .link-btn{
-    position:relative; /* ancre .badge-new */
     display:block;
     width:100%;
     font-family:var(--font-title);
@@ -156,35 +155,6 @@
     box-shadow:var(--shadow);
     transition:transform 120ms ease, box-shadow 120ms ease;
   }
-  /* Indique que le lien ouvre un nouvel onglet — détail de finition courant
-     sur les pages "liens en bio" (Linktree, Bento…). Discrète (opacité
-     réduite, taille moindre), pas ajoutée au texte lui-même (aria-label
-     inutile : target="_blank" suffit à décrire le comportement pour un
-     lecteur d'écran, cette flèche est purement visuelle). */
-  .link-btn::after{
-    content:'↗';
-    display:inline-block;
-    margin-left:.4em;
-    font-size:.85em;
-    opacity:.5;
-    vertical-align:0;
-  }
-  /* Badge "Nouveau" — posé en JS (voir isRecent()) sur les liens créés il y
-     a moins de 7 jours, disparaît tout seul ensuite sans action de Sam. */
-  .badge-new{
-    position:absolute;
-    top:-.6rem;
-    right:1rem;
-    font-family:var(--font-body);
-    font-size:.65rem;
-    font-weight:700;
-    text-transform:uppercase;
-    letter-spacing:.03em;
-    color:var(--white);
-    background:var(--ink);
-    border-radius:999px;
-    padding:.2rem .55rem;
-  }
   /* Même effet que .btn-primary/.card sur le site principal (css/styles.css) :
      translate(2px,2px) + ombre réduite. Au survol pour la souris (desktop),
      au clic pour le tactile (@media (hover:none) — un écran tactile n'a pas
@@ -198,6 +168,40 @@
     text-align:center;
     font-size:.9rem;
     color:rgba(255,255,255,.8); /* texte clair sur fond bleu, était sombre sur fond blanc */
+  }
+  /* Loader — voir commentaire dans le HTML pour la source. Pastilles
+     blanches à bordure noire (au lieu des ronds gris pleins de l'exemple
+     d'origine) pour rester dans la DA de la page. */
+  .loader{
+    --dim:3rem;
+    width:var(--dim);
+    height:var(--dim);
+    position:relative;
+    margin:1.5rem auto;
+    animation:loader-spin 2s linear infinite;
+  }
+  .loader .circle{
+    --dim:1.1rem;
+    width:var(--dim);
+    height:var(--dim);
+    background:var(--white);
+    border:2px solid var(--ink);
+    border-radius:50%;
+    position:absolute;
+  }
+  .loader .circle:nth-child(1){ top:0; left:0; }
+  .loader .circle:nth-child(2){ top:0; right:0; }
+  .loader .circle:nth-child(3){ bottom:0; left:0; }
+  .loader .circle:nth-child(4){ bottom:0; right:0; }
+  @keyframes loader-spin{
+    0%{ transform:scale(1) rotate(0); }
+    20%,25%{ transform:scale(1.3) rotate(90deg); }
+    45%,50%{ transform:scale(1) rotate(180deg); }
+    70%,75%{ transform:scale(1.3) rotate(270deg); }
+    95%,100%{ transform:scale(1) rotate(360deg); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .loader{ animation:none; }
   }
   /* Apparition en cascade — logo, description puis chaque lien (voir JS,
      qui pose un animation-delay croissant par élément). Même recette que
@@ -226,15 +230,24 @@
     .insta-btn:active{ transform:translate(2px,2px); box-shadow:var(--shadow-sm); }
   }
 
+  /* Même gabarit que .link-btn (voir la classe partagée dans le HTML), mais
+     inversé (fond noir/texte blanc) pour se distinguer clairement des liens
+     de la liste — demande explicite de Sam, "comme les autres boutons mais
+     qui se fasse remarquer".
+     Pulsation retirée le 09.09.2026 (demande explicite de Sam) : elle
+     nécessitait de couper l'animation au survol (`animation:none`) pour ne
+     pas continuer à pulser sous le doigt/la souris — sauf que l'opacité
+     visible (1) n'était maintenue QUE par le fondu d'entrée .entree resté
+     "figé" sur son état final (animation-fill-mode:both). Couper
+     l'animation supprimait aussi ce figeage, et l'élément retombait à son
+     opacité de base (0, invisible) : le bouton semblait disparaître au
+     survol. Sans pulsation, plus besoin de rien couper au survol — .entree
+     (partagée avec tous les autres éléments de la cascade) suffit. */
   .site-footer-link{
-    display:inline-block;
     margin-top:2.5rem;
-    font-family:var(--font-body);
-    font-size:.85rem;
-    color:rgba(255,255,255,.75);
-    text-decoration:none;
+    background:var(--ink);
+    color:var(--white);
   }
-  .site-footer-link:hover{ text-decoration:underline; }
 
   /* ---- Curseur personnalisé (desktop) — même recette que css/styles.css
      (index.html), reprise ici pour la cohérence sur ordinateur. Inactif sur
@@ -279,8 +292,25 @@
   <p class="tagline entree" id="tagline" style="animation-delay:80ms">Sticker anti-soumission chimique pour vos verres — simple, discret, efficace.</p>
 
   <div class="links-list" id="links-list">
-    <p class="empty-note">Chargement…</p>
+    <!-- Loader — inspiré d'un exemple fourni par Sam (Uiverse.io by
+         AbanoubMagdy1), adapté aux couleurs de la marque (pastilles
+         blanches à bordure noire plutôt que des ronds gris pleins, cohérent
+         avec le reste de la page). Remplacé par renderLinks() dès que
+         Firebase répond. -->
+    <div class="loader" role="status" aria-label="Chargement des liens">
+      <div class="circle" aria-hidden="true"></div>
+      <div class="circle" aria-hidden="true"></div>
+      <div class="circle" aria-hidden="true"></div>
+      <div class="circle" aria-hidden="true"></div>
+    </div>
   </div>
+
+  <!-- Positionné juste après la liste dynamique (visuellement "le dernier
+       lien de la liste"), demande explicite de Sam — reste néanmoins codé
+       en dur ici, pas dans Firebase/goLinks : url et style fixes ("se fait
+       remarquer" ne doit pas pouvoir être perdu par une modification
+       accidentelle depuis cc-9f3k2.html). -->
+  <a class="link-btn site-footer-link" id="site-footer-link" href="https://clearcup.ch">Notre site clearcup.ch</a>
 
   <!-- Séparé de la liste dynamique — voir commentaire d'en-tête. Même
        recette (icône + lien) que le reste du site, ex. index.html. -->
@@ -291,8 +321,6 @@
       <circle cx="17.5" cy="6.5" r="0.5" fill="currentColor" stroke="none"/>
     </svg>
   </a>
-
-  <a class="site-footer-link" id="site-footer-link" href="https://clearcup.ch">Voir le site → clearcup.ch</a>
 </div>
 
 <!-- Curseur personnalisé desktop — voir @media (hover:hover) plus haut et le
@@ -327,13 +355,6 @@ function escapeHtml(str){
   });
 }
 
-// Badge "Nouveau" — 7 jours depuis createdAt (timestamp serveur, ms), puis
-// disparaît tout seul sans que Sam ait à y penser.
-var NEW_BADGE_MS = 7 * 24 * 60 * 60 * 1000;
-function isRecent(createdAt){
-  return typeof createdAt === 'number' && (Date.now() - createdAt) < NEW_BADGE_MS;
-}
-
 // Compteur de clics — transaction (pas un simple get+set) pour rester
 // correct même si plusieurs personnes cliquent au même moment. Ne bloque
 // jamais l'ouverture du lien (pas de preventDefault : le clic ouvre le lien
@@ -360,9 +381,8 @@ function renderLinks(links, db){
     return;
   }
   $('links-list').innerHTML = links.map(function(l){
-    var badge = isRecent(l.createdAt) ? '<span class="badge-new">Nouveau</span>' : '';
     return '<a class="link-btn" data-id="' + l.id + '" href="' + escapeHtml(l.url) + '" target="_blank" rel="noopener noreferrer">' +
-      badge + escapeHtml(l.label) + '</a>';
+      escapeHtml(l.label) + '</a>';
   }).join('');
 
   $('links-list').querySelectorAll('.link-btn').forEach(function(el, i){
@@ -377,11 +397,14 @@ function renderLinks(links, db){
   });
 
   if (firstLinksRender){
+    // Ordre de la cascade aligné sur l'ordre visuel réel : liens → site
+    // principal → Instagram (voir le HTML, site-footer-link a été
+    // repositionné avant insta-btn le 09.09.2026).
     var tailDelay = 160 + links.length * 70;
-    $('insta-btn').classList.add('entree');
-    $('insta-btn').style.animationDelay = (tailDelay + 70) + 'ms';
     $('site-footer-link').classList.add('entree');
-    $('site-footer-link').style.animationDelay = (tailDelay + 140) + 'ms';
+    $('site-footer-link').style.animationDelay = (tailDelay + 70) + 'ms';
+    $('insta-btn').classList.add('entree');
+    $('insta-btn').style.animationDelay = (tailDelay + 140) + 'ms';
     firstLinksRender = false;
   }
 }
