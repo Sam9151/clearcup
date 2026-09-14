@@ -1609,7 +1609,12 @@
         rate: 'Tu étais trop concentré sur ton burger, t’as pas fait attention à ton verre.'
       },
       photo_groupe: {
-        texte: 'Photo de groupe !', sousTitre: 'Tout le monde est là', label: 'Maintiens',
+        // label 'Maintiens' corrigé en 'Souris !' le 14.09.2026 : reliquat de
+        // l'ancienne interaction "hold" (voir DISTRACTIONS ci-dessous), la
+        // carte est passée en tap simple le 09.09.2026 mais le texte du
+        // bouton disait encore "Maintiens" alors qu'il fallait taper une
+        // seule fois — incohérent avec le geste réel demandé au joueur.
+        texte: 'Photo de groupe !', sousTitre: 'Tout le monde est là', label: 'Souris !',
         rate: 'Le temps de sourire pour la photo, t’as lâché ton verre.'
       },
       drop_arrive: {
