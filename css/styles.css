@@ -1952,3 +1952,35 @@ details, summary {
   }
 }
 
+
+/* ── Source des statistiques (box de la home) ── */
+#probleme .card,
+#problem .card {
+  display: flex;
+  flex-direction: column;
+}
+
+.stat-source-line {
+  margin-top: auto;
+  padding-top: 1rem;
+  font-family: 'Arimo', sans-serif;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.stat-source {
+  color: #444444;
+  text-decoration: none;
+}
+
+.stat-source:hover,
+.stat-source:focus-visible {
+  color: var(--black);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.stat-source:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
