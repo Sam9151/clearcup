@@ -1992,9 +1992,15 @@ details, summary {
   position: relative;
 }
 
+.sources-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-dark);
+}
+
 .sources h2 {
-  text-align: center;
-  margin-bottom: 1.5rem;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  margin-bottom: 1.25rem;
+  text-align: left;
 }
 
 .sources ol {
@@ -2022,8 +2028,8 @@ details, summary {
 }
 
 .sources p {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
   font-family: 'Arimo', sans-serif;
   font-size: 0.85rem;
-  text-align: center;
+  opacity: 0.8;
 }
