@@ -1988,7 +1988,7 @@ details, summary {
 /* ── Section Sources (pages guides) ── */
 .sources {
   background: var(--blue);
-  padding: 4rem 0 2rem;
+  padding: 4rem 0 3.5rem;
   position: relative;
 }
 
