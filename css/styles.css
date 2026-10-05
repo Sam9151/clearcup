@@ -1984,3 +1984,46 @@ details, summary {
   outline: 2px solid var(--black);
   outline-offset: 2px;
 }
+
+/* ── Section Sources (pages guides) ── */
+.sources {
+  background: var(--blue);
+  padding: 4rem 0 2rem;
+  position: relative;
+}
+
+.sources h2 {
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.sources ol {
+  list-style: decimal;
+  padding-left: 1.5rem;
+  font-family: 'Arimo', sans-serif;
+  font-size: 0.9rem;
+  line-height: 1.6;
+  text-align: left;
+}
+
+.sources li + li {
+  margin-top: 0.6rem;
+}
+
+.sources a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.sources a:focus-visible {
+  outline: 2px solid var(--black);
+  outline-offset: 2px;
+}
+
+.sources p {
+  margin-top: 1.5rem;
+  font-family: 'Arimo', sans-serif;
+  font-size: 0.85rem;
+  text-align: center;
+}
